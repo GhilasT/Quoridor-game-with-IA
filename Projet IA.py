@@ -75,12 +75,15 @@ def conflit(mur1, mur2):
                 mur1['y'] + 1 >= mur2['y'])
         
 def mur_est_valide(mur):
-    if mur['orientation'] == 'H':
-        return (0 <= mur['x'] <= GRID_SIZE-2 and 
-                0 <= mur['y'] <= GRID_SIZE-2)
-    else:
-        return (0 <= mur['x'] <= GRID_SIZE-2 and 
-                0 <= mur['y'] <= GRID_SIZE-2)
+    if not (0 <= mur['x'] <= GRID_SIZE-2 and 
+            0 <= mur['y'] <= GRID_SIZE-2):
+        return False
+    
+    for mur_existant in murs:
+        if conflit(mur, mur_existant):
+            return False
+    
+    return True
 
 def gestion_clic_souris(pos_souris):
     # Cordonnées de la grille sans les marges
