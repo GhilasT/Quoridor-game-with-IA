@@ -154,10 +154,13 @@ def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur, g
     
     return False
 
-def get_possible_moves():
+def get_possible_moves(i, j):
     moves = []
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-
+    for di, dj in directions:
+        #calculer la nouvelle position
+        ni, nj = i + di, j + dj
+        
 def gestion_clic_souris(pos_souris):
     global murs
     
