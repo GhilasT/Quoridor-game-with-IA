@@ -50,6 +50,15 @@ def gestion_clic_souris(pos_souris):
     x_relatif = pos_souris[0] - MARGE
     y_relatif = pos_souris[1] - MARGE
 
+    # Verifier si le clic est dans la grille
+    if x_relatif < 0 or y_relatif < 0:
+        return
+    if x_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
+        return
+    if y_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
+        return
+
+
         
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
