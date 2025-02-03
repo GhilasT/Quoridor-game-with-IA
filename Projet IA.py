@@ -92,7 +92,9 @@ def convertir_pos_souris_en_cell(pos):
     # Vérifier si la souris n'est pas hors de la grille (a gauche ou en haut)
     if x_rel < 0 or y_rel < 0:
         return None, None
-
+    
+    cell_x = x_rel // (TAILLE_CASE + ESPACEMENT)
+    cell_y = y_rel // (TAILLE_CASE + ESPACEMENT)
     
     
     
