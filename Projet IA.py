@@ -5,13 +5,14 @@ import pygame
 pygame.init()
 
 # Définir les dimensions de la fenêtre
-largeur, hauteur = 900, 900
-marge = 50
-espacement = 5
-taille_case = (largeur - 2*marge - 8*espacement) // 9
+GRID_SIZE = 9
+LARGEUR, HAUTEUR = 900, 900
+MARGE = 50
+ESPACEMENT = 5
+TAILLE_CASE = (LARGEUR - 2*MARGE - 8*ESPACEMENT) // GRID_SIZE
 
 # Créer la fenêtre
-fenetre = pygame.display.set_mode((largeur, hauteur))
+fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
 pygame.display.set_caption("Quoridor")
 
 # Constantes de couleurs
@@ -37,15 +38,15 @@ def dessiner_grille(fenetre, grille):
     fenetre.fill(FOND)
     for x in range(9):
         for y in range(9):
-            rect = pygame.Rect(x * (taille_case + espacement) + marge, y * (taille_case + espacement) + marge, taille_case, taille_case)
+            rect = pygame.Rect(x * (TAILLE_CASE + ESPACEMENT) + MARGE, y * (TAILLE_CASE + ESPACEMENT) + MARGE, TAILLE_CASE, TAILLE_CASE)
             pygame.draw.rect(fenetre, CASE, rect)
     
     for i in range(9):
         for j in range(9):
             if grille[i][j] == 1:
-                pygame.draw.circle(fenetre, JOUEUR1, (j * (taille_case + espacement) + marge + taille_case // 2, i * (taille_case + espacement) + marge + taille_case // 2), taille_case // 3)
+                pygame.draw.circle(fenetre, JOUEUR1, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
             elif grille[i][j] == 2:
-                pygame.draw.circle(fenetre, JOUEUR2, (j * (taille_case + espacement) + marge + taille_case // 2, i * (taille_case + espacement) + marge + taille_case // 2), taille_case // 3)
+                pygame.draw.circle(fenetre, JOUEUR2, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
     pygame.display.flip()
 
 # Boucle principale
