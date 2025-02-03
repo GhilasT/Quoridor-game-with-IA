@@ -23,10 +23,8 @@ NOIR = (0, 0, 0)
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
     # 0 pour une cellule vide
-    # 1 pour un mur horizontal
-    # 2 pour un mur vertical
-    # 3 pour le joueur 1
-    # 4 pour le joueur 2
+    # 1 pour le joueur 1
+    # 2 pour le joueur 2
     grille = [[0 for _ in range(9)] for _ in range(9)]
     return grille
 
