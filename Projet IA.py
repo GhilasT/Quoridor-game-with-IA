@@ -64,6 +64,11 @@ def dessiner_murs(surface):
 def conflit(mur1, mur2):
     if mur1['orientation'] != mur2['orientation']:
         return False
+    
+    if mur1['orientation'] == 'H':
+        return (mur1['y'] == mur2['y'] and 
+                mur1['x'] <= mur2['x'] + 1 and 
+                mur1['x'] + 1 >= mur2['x'])
         
 def mur_est_valide(mur):
     if mur['orientation'] == 'H':
