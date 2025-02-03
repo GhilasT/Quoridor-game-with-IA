@@ -9,3 +9,4 @@ taille_case = (largeur) // 9
 
 # Créer la fenêtre
 fenetre = pygame.display.set_mode((largeur, hauteur))
+pygame.display.set_caption("Quoridor")
