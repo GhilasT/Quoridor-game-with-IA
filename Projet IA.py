@@ -109,6 +109,9 @@ def convertir_pos_souris_en_cell(pos):
 
     return cell_y, cell_x
 
+def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
+    ...
+
 def gestion_clic_souris(pos_souris):
     global murs
     
