@@ -12,6 +12,9 @@ taille_case = (largeur) // 9
 fenetre = pygame.display.set_mode((largeur, hauteur))
 pygame.display.set_caption("Quoridor")
 
+# Constantes de couleurs
+BLANC = (255, 255, 255)
+NOIR = (0, 0, 0)
 
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut de 0 (pour dire que les cellules sont vide)
