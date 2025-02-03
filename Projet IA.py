@@ -154,7 +154,7 @@ def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur, g
     
     return False
 
-def get_possible_moves(i, j):
+def get_possible_moves(i, j, grille):
     moves = []
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     for di, dj in directions:
