@@ -23,10 +23,12 @@ NOIR = (0, 0, 0)
 JOUEUR1 = (130, 9, 5)
 JOUEUR2 = (11, 30, 74)
 MUR = (35, 82, 250)
+MUR_PREVIEW = (35, 82, 250, 50)
 murs = [
     # {'x': 2, 'y': 3, 'orientation': 'H'},  #Exemple Mur horizontal entre les cases
     # {'x': 5, 'y': 4, 'orientation': 'V'},  #Exemple Mur vertical entre les cases
 ]
+mur_preview = None
 
 def dessiner_murs(surface):
     for mur in murs:
