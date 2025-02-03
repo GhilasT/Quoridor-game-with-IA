@@ -1,3 +1,4 @@
+import sys
 import pygame
 
 # Initialiser Pygame
@@ -20,7 +21,10 @@ def creer_grille_quoridor():
 def main():
     #TODO ajouter un quit event
     while True: 
-        ...
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
     
 
 if __name__ == "__main__":
