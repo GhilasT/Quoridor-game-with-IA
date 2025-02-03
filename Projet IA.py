@@ -36,8 +36,14 @@ def dessiner_murs(surface):
             y = MARGE + (mur['y'] + 1) * (TAILLE_CASE + ESPACEMENT) - ESPACEMENT
             largeur = 2 * TAILLE_CASE + ESPACEMENT
             hauteur = ESPACEMENT
+        else:
+            # Calcul vertical avec marges et espacements
+            x = MARGE + (mur['x'] + 1) * (TAILLE_CASE + ESPACEMENT) - ESPACEMENT
+            y = MARGE + mur['y'] * (TAILLE_CASE + ESPACEMENT)
+            largeur = ESPACEMENT
+            hauteur = 2 * TAILLE_CASE + ESPACEMENT
 
-
+              
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
     # 0 pour une cellule vide
