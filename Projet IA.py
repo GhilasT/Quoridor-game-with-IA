@@ -131,10 +131,15 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
                     return True
     return False
 
-def mouvement_est_valide(current_i, current_j, target_i, target_j):
+def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur):
     di = target_i - current_i
     dj = target_j - current_j
     
+    #cas normal (une case)
+    if (abs(di) == 1 and dj == 0) or (di == 0 and abs(dj) == 1):
+        return not mur_bloque_mouvement(current_i, current_j, target_i, target_j)
+    
+
 def gestion_clic_souris(pos_souris):
     global murs
     
