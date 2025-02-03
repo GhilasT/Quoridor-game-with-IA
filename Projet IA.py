@@ -15,8 +15,8 @@ fenetre = pygame.display.set_mode((largeur, hauteur))
 pygame.display.set_caption("Quoridor")
 
 # Constantes de couleurs
-FOND = (157, 235, 235)
-CASE = (69, 79, 79)
+FOND = (64, 36, 18)
+CASE = (250, 233, 192)
 BLANC = (255, 255, 255)
 NOIR = (0, 0, 0)
 
