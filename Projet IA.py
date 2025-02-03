@@ -100,7 +100,13 @@ def convertir_pos_souris_en_cell(pos):
     if cell_x >= GRID_SIZE or cell_y >= GRID_SIZE:
         return None, None
     
-    
+    offset_x = x_rel % (TAILLE_CASE + ESPACEMENT)
+    offset_y = y_rel % (TAILLE_CASE + ESPACEMENT)
+
+    #Vérifier si la souris n'est pas entre 2 cases
+    if offset_x > TAILLE_CASE or offset_y > TAILLE_CASE:
+        return None, None
+
 def gestion_clic_souris(pos_souris):
     # Cordonnées de la grille sans les marges
     x_relatif = pos_souris[0] - MARGE
