@@ -96,6 +96,9 @@ def convertir_pos_souris_en_cell(pos):
     cell_x = x_rel // (TAILLE_CASE + ESPACEMENT)
     cell_y = y_rel // (TAILLE_CASE + ESPACEMENT)
     
+    # Vérifier si la souris n'est pas hors de la grille (a droite ou en bas)
+    if cell_x >= GRID_SIZE or cell_y >= GRID_SIZE:
+        return None, None
     
     
 def gestion_clic_souris(pos_souris):
