@@ -45,6 +45,14 @@ def dessiner_murs(surface):
 
         pygame.draw.rect(surface, MUR, (x, y, largeur, hauteur))
 
+def mur_est_valide(mur):
+    if mur['orientation'] == 'H':
+        return (0 <= mur['x'] <= GRID_SIZE-2 and 
+                0 <= mur['y'] <= GRID_SIZE-2)
+    else:
+        return (0 <= mur['x'] <= GRID_SIZE-2 and 
+                0 <= mur['y'] <= GRID_SIZE-2)
+
 def gestion_clic_souris(pos_souris):
     # Cordonnées de la grille sans les marges
     x_relatif = pos_souris[0] - MARGE
@@ -58,18 +66,35 @@ def gestion_clic_souris(pos_souris):
     if y_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
         return
 
-    # Calculer la case et l'offset 
+    # Calculer la case
     case_x = x_relatif // (TAILLE_CASE + ESPACEMENT)
     case_y = y_relatif // (TAILLE_CASE + ESPACEMENT)
+    case_x = min(case_x, GRID_SIZE-2)
+    case_y = min(case_y, GRID_SIZE-2)
+    
+    #caculer l'offset
     offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
+    
     # Détecter l'orientation
     seuil = 10  # Seuil de détection
     if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
         murs.append({'x': case_x, 'y': case_y, 'orientation': 'H'})
     elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
         murs.append({'x': case_x, 'y': case_y, 'orientation': 'V'})
+        
+    nouveau_mur = None
+    if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
+        nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'H'}
+    elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
+        nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'V'}
+
+    if nouveau_mur: 
+        if mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
+            murs.append(nouveau_mur)
+    
+    
         
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
