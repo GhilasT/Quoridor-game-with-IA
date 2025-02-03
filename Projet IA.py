@@ -207,6 +207,8 @@ def dessiner_grille(fenetre, grille, joueur_selectionne):
                     
 # Boucle principale
 def main():
+    tour_joueur = 1
+    joueur_selectionne = None
     grille = creer_grille()
     while True: 
         for event in pygame.event.get():
