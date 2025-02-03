@@ -13,7 +13,7 @@ fenetre = pygame.display.set_mode((largeur, hauteur))
 pygame.display.set_caption("Quoridor")
 
 
-def creer_grille_quoridor():
+def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut de 0 (pour dire que les cellules sont vide)
     grille = [[0 for _ in range(9)] for _ in range(9)]
     return grille
