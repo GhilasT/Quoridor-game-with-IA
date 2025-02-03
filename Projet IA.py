@@ -104,7 +104,10 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-    
+        
+        if event.type == pygame.MOUSEBUTTONDOWN:
+                gestion_clic_souris(event.pos)
+        
         dessiner_grille(fenetre,grille)
         dessiner_murs(fenetre)
         pygame.display.flip()
