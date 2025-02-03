@@ -183,20 +183,28 @@ def creer_grille():
     grille[8][4] = 2
     return grille
 
-def dessiner_grille(fenetre, grille):
+def dessiner_grille(fenetre, grille, joueur_selectionne):
     fenetre.fill(FOND)
-    for x in range(9):
-        for y in range(9):
-            rect = pygame.Rect(x * (TAILLE_CASE + ESPACEMENT) + MARGE, y * (TAILLE_CASE + ESPACEMENT) + MARGE, TAILLE_CASE, TAILLE_CASE)
+    for i in range(9):
+        for j in range(9):
+            rect = pygame.Rect(j * (TAILLE_CASE + ESPACEMENT) + MARGE, i * (TAILLE_CASE + ESPACEMENT) + MARGE, TAILLE_CASE, TAILLE_CASE)
             pygame.draw.rect(fenetre, CASE, rect)
-    
+
     for i in range(9):
         for j in range(9):
             if grille[i][j] == 1:
-                pygame.draw.circle(fenetre, JOUEUR1, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
+                pos = (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2, 
+                       i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2)
+                pygame.draw.circle(fenetre, JOUEUR1, pos, TAILLE_CASE//3)
+                if joueur_selectionne == (i, j):
+                    pygame.draw.circle(fenetre, BLANC, pos, TAILLE_CASE//3 + 2, 2)
             elif grille[i][j] == 2:
-                pygame.draw.circle(fenetre, JOUEUR2, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
-
+                pos = (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2, 
+                       i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2)
+                pygame.draw.circle(fenetre, JOUEUR2, pos, TAILLE_CASE//3)
+                if joueur_selectionne == (i, j):
+                    pygame.draw.circle(fenetre, BLANC, pos, TAILLE_CASE//3 + 2, 2)
+                    
 # Boucle principale
 def main():
     grille = creer_grille()
