@@ -125,7 +125,9 @@ def gestion_clic_souris(pos_souris):
     if nouveau_mur: 
         if mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
             murs.append(nouveau_mur)
-
+    if nouveau_mur and mur_est_valide(nouveau_mur):
+        murs.append(nouveau_mur)
+        
 # Réutiliser du code de la fonction de gestion du clic pour gérer le survol de la souris    
 def gestion_hover_souris(pos_souris):
     global mur_preview
