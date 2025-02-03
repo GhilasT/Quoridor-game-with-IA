@@ -24,6 +24,8 @@ JOUEUR1 = (130, 9, 5)
 JOUEUR2 = (11, 30, 74)
 MUR = (35, 82, 250)
 MUR_PREVIEW = (78, 126, 255)
+HIGHLIGHT = (173, 216, 230, 100)
+
 murs = [
     # {'x': 2, 'y': 3, 'orientation': 'H'},  #Exemple Mur horizontal entre les cases
     # {'x': 5, 'y': 4, 'orientation': 'V'},  #Exemple Mur vertical entre les cases
@@ -152,6 +154,26 @@ def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur, g
     
     return False
 
+def get_possible_moves(i, j, tour_joueur,grille):
+    moves = []
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    for di, dj in directions:
+        #calculer la nouvelle position
+        ni, nj = i + di, j + dj
+        # Vérification mouvement de base
+        if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
+            if not mur_bloque_mouvement(i, j, ni, nj) and grille[ni][nj] == 0:
+                moves.append((ni, nj))
+            elif grille[ni][nj] not in (0, tour_joueur):
+                # Vérification saut
+                ni2, nj2 = ni + di, nj + dj
+                if 0 <= ni2 < GRID_SIZE and 0 <= nj2 < GRID_SIZE:
+                    if (not mur_bloque_mouvement(i, j, ni, nj) and 
+                        not mur_bloque_mouvement(ni, nj, ni2, nj2) and 
+                        grille[ni2][nj2] == 0):
+                        moves.append((ni2, nj2))
+    return moves
+        
 def gestion_clic_souris(pos_souris):
     global murs
     
@@ -230,7 +252,7 @@ def creer_grille():
     grille[8][4] = 2
     return grille
 
-def dessiner_grille(fenetre, grille, joueur_selectionne):
+def dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves):
     fenetre.fill(FOND)
     for i in range(9):
         for j in range(9):
@@ -251,44 +273,73 @@ def dessiner_grille(fenetre, grille, joueur_selectionne):
                 pygame.draw.circle(fenetre, JOUEUR2, pos, TAILLE_CASE//3)
                 if joueur_selectionne == (i, j):
                     pygame.draw.circle(fenetre, BLANC, pos, TAILLE_CASE//3 + 2, 2)
-                    
+    # Dessiner les highlights
+    if joueur_selectionne is not None:
+        surface_highlight = pygame.Surface((TAILLE_CASE, TAILLE_CASE), pygame.SRCALPHA)
+        surface_highlight.fill(HIGHLIGHT)
+        
+        for mi, mj in possible_moves:
+            rect = pygame.Rect(
+                mj * (TAILLE_CASE + ESPACEMENT) + MARGE,
+                mi * (TAILLE_CASE + ESPACEMENT) + MARGE,
+                TAILLE_CASE,
+                TAILLE_CASE
+            )
+            fenetre.blit(surface_highlight, rect.topleft)
+            
 # Boucle principale
 def main():
     grille = creer_grille()
     tour_joueur = 1
     joueur_selectionne = None
-    mur_pose = False 
-
+    possible_moves = []
+    
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+                
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 i, j = convertir_pos_souris_en_cell(event.pos)
                 
                 if joueur_selectionne is not None:
-                    if i is not None and j is not None and i == joueur_selectionne[0] and j == joueur_selectionne[1]:
+                    if i is None or j is None:  # Clic invalide
+                        continue
+                    # Clic sur le même joueur : désélection
+                    if i == joueur_selectionne[0] and j == joueur_selectionne[1]:
                         joueur_selectionne = None
+                        possible_moves = []
+                    
+                    # Tentative de déplacement
                     else:
                         current_i, current_j = joueur_selectionne
-                        if i is not None and j is not None:
-                           if mouvement_est_valide(current_i, current_j, i, j, tour_joueur, grille):
-                                if grille[i][j] == 0:
-                                    grille[current_i][current_j] = 0
-                                    grille[i][j] = tour_joueur
-                                    joueur_selectionne = None
-                                    tour_joueur = 2 if tour_joueur == 1 else 1
-                else:
-                    if i is not None and j is not None and grille[i][j] == tour_joueur:
-                        joueur_selectionne = (i, j)
-                    else:
-                        if gestion_clic_souris(event.pos):
-                            tour_joueur = 2 if tour_joueur == 1 else 1
+                        if mouvement_est_valide(current_i, current_j, i, j, tour_joueur, grille):
+                            if grille[i][j] == 0:
+                                grille[current_i][current_j] = 0
+                                grille[i][j] = tour_joueur
+                                joueur_selectionne = None
+                                possible_moves = []
+                                tour_joueur = 2 if tour_joueur == 1 else 1
+                
+                else:  # Aucun joueur sélectionné
+                    if i is not None and j is not None:
+                        # Clic sur un joueur actif
+                        if grille[i][j] == tour_joueur:
+                            joueur_selectionne = (i, j)
+                            possible_moves = get_possible_moves(i, j, tour_joueur, grille)
+                        
+                        # Clic pour poser un mur
+                        else:
+                            if gestion_clic_souris(event.pos):
+                                possible_moves = []  # Reset les highlights
+                                tour_joueur = 2 if tour_joueur == 1 else 1
+            
             elif event.type == pygame.MOUSEMOTION:
                 gestion_hover_souris(event.pos)
         
-        dessiner_grille(fenetre, grille, joueur_selectionne)
+        # Dessin
+        dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
         dessiner_murs(fenetre)
         pygame.display.flip()
         
