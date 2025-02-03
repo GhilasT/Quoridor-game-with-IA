@@ -23,7 +23,7 @@ NOIR = (0, 0, 0)
 JOUEUR1 = (130, 9, 5)
 JOUEUR2 = (11, 30, 74)
 MUR = (35, 82, 250)
-MUR_PREVIEW = (35, 82, 250, 50)
+MUR_PREVIEW = (78, 126, 255)
 murs = [
     # {'x': 2, 'y': 3, 'orientation': 'H'},  #Exemple Mur horizontal entre les cases
     # {'x': 5, 'y': 4, 'orientation': 'V'},  #Exemple Mur vertical entre les cases
@@ -60,6 +60,9 @@ def dessiner_murs(surface):
             hauteur = 2 * TAILLE_CASE + ESPACEMENT
         
         pygame.draw.rect(surface, MUR_PREVIEW, (x, y, largeur, hauteur))
+
+def conflit(mur1, mur2):
+    ...
         
 def mur_est_valide(mur):
     if mur['orientation'] == 'H':
