@@ -23,6 +23,10 @@ def creer_grille():
 
 def dessiner_grille(fenetre):
     fenetre.fill(BLANC)
+    for x in range(9):
+        for y in range(9):
+            rect = pygame.Rect(x * (taille_case), y * (taille_case), taille_case, taille_case)
+            pygame.draw.rect(fenetre, NOIR, rect, 1)
     pygame.display.flip()
 
 # Boucle principale
