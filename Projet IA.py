@@ -23,16 +23,18 @@ def creer_grille():
 
 def dessiner_grille(fenetre):
     fenetre.fill(BLANC)
+    pygame.display.flip()
 
 # Boucle principale
 def main():
-    #TODO ajouter un quit event
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
     
+        dessiner_grille(fenetre)
+
 
 if __name__ == "__main__":
     main()
