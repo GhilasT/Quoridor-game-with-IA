@@ -84,13 +84,60 @@ def mur_est_valide(mur):
             return False
     
     return True
+def convertir_pos_souris_en_cell(pos):
+    x, y = pos
+    x_rel = x - MARGE
+    y_rel = y - MARGE
+    
+    # Vérifier si la souris n'est pas hors de la grille (a gauche ou en haut)
+    if x_rel < 0 or y_rel < 0:
+        return None, None
+    
+    cell_x = x_rel // (TAILLE_CASE + ESPACEMENT)
+    cell_y = y_rel // (TAILLE_CASE + ESPACEMENT)
+    
+    # Vérifier si la souris n'est pas hors de la grille (a droite ou en bas)
+    if cell_x >= GRID_SIZE or cell_y >= GRID_SIZE:
+        return None, None
+    
+    offset_x = x_rel % (TAILLE_CASE + ESPACEMENT)
+    offset_y = y_rel % (TAILLE_CASE + ESPACEMENT)
+
+    #Vérifier si la souris n'est pas entre 2 cases
+    if offset_x > TAILLE_CASE or offset_y > TAILLE_CASE:
+        return None, None
+
+    return cell_y, cell_x
+
+def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
+    di = target_i - current_i
+    dj = target_j - current_j
+    
+    # Mouvement horizontal
+    if di == 0 and abs(dj) == 1:
+        x = min(current_j, target_j)
+        orientation = 'V'
+        for mur in murs:
+            if mur['orientation'] == orientation and mur['x'] == x:
+                if mur['y'] <= current_i <= mur['y'] + 1:
+                    return True
+    # Mouvement vertical
+    elif abs(di) == 1 and dj == 0:
+        y = min(current_i, target_i)
+        orientation = 'H'
+        for mur in murs:
+            if mur['orientation'] == orientation and mur['y'] == y:
+                if mur['x'] <= current_j <= mur['x'] + 1:
+                    return True
+    return False
+
 
 def gestion_clic_souris(pos_souris):
-    # Cordonnées de la grille sans les marges
+    global murs
+    
     x_relatif = pos_souris[0] - MARGE
     y_relatif = pos_souris[1] - MARGE
 
-    # Verifier si le clic est dans la grille
     if x_relatif < 0 or y_relatif < 0:
         return
     if x_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
@@ -98,17 +145,14 @@ def gestion_clic_souris(pos_souris):
     if y_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
         return
 
-    # Calculer la case
     case_x = x_relatif // (TAILLE_CASE + ESPACEMENT)
     case_y = y_relatif // (TAILLE_CASE + ESPACEMENT)
     case_x = min(case_x, GRID_SIZE-2)
     case_y = min(case_y, GRID_SIZE-2)
     
-    #caculer l'offset
     offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
-    
     seuil = 10
     nouveau_mur = None
     
@@ -119,6 +163,8 @@ def gestion_clic_souris(pos_souris):
 
     if nouveau_mur and mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
         murs.append(nouveau_mur)
+        return True
+    return False
         
 # Réutiliser du code de la fonction de gestion du clic pour gérer le survol de la souris    
 def gestion_hover_souris(pos_souris):
@@ -164,38 +210,69 @@ def creer_grille():
     grille[8][4] = 2
     return grille
 
-def dessiner_grille(fenetre, grille):
+def dessiner_grille(fenetre, grille, joueur_selectionne):
     fenetre.fill(FOND)
-    for x in range(9):
-        for y in range(9):
-            rect = pygame.Rect(x * (TAILLE_CASE + ESPACEMENT) + MARGE, y * (TAILLE_CASE + ESPACEMENT) + MARGE, TAILLE_CASE, TAILLE_CASE)
+    for i in range(9):
+        for j in range(9):
+            rect = pygame.Rect(j * (TAILLE_CASE + ESPACEMENT) + MARGE, i * (TAILLE_CASE + ESPACEMENT) + MARGE, TAILLE_CASE, TAILLE_CASE)
             pygame.draw.rect(fenetre, CASE, rect)
-    
+
     for i in range(9):
         for j in range(9):
             if grille[i][j] == 1:
-                pygame.draw.circle(fenetre, JOUEUR1, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
+                pos = (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2, 
+                       i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2)
+                pygame.draw.circle(fenetre, JOUEUR1, pos, TAILLE_CASE//3)
+                if joueur_selectionne == (i, j):
+                    pygame.draw.circle(fenetre, BLANC, pos, TAILLE_CASE//3 + 2, 2)
             elif grille[i][j] == 2:
-                pygame.draw.circle(fenetre, JOUEUR2, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
-
+                pos = (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2, 
+                       i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE//2)
+                pygame.draw.circle(fenetre, JOUEUR2, pos, TAILLE_CASE//3)
+                if joueur_selectionne == (i, j):
+                    pygame.draw.circle(fenetre, BLANC, pos, TAILLE_CASE//3 + 2, 2)
+                    
 # Boucle principale
 def main():
     grille = creer_grille()
+    tour_joueur = 1
+    joueur_selectionne = None
+    mur_pose = False 
+
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-        
-        if event.type == pygame.MOUSEBUTTONDOWN:
-                gestion_clic_souris(event.pos)
-            
-        if event.type == pygame.MOUSEMOTION:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                i, j = convertir_pos_souris_en_cell(event.pos)
+                
+                if joueur_selectionne is not None:
+                    if i is not None and j is not None and i == joueur_selectionne[0] and j == joueur_selectionne[1]:
+                        joueur_selectionne = None
+                    else:
+                        current_i, current_j = joueur_selectionne
+                        if i is not None and j is not None:
+                            di = abs(i - current_i)
+                            dj = abs(j - current_j)
+                            if (di == 1 and dj == 0) or (di == 0 and dj == 1):
+                                if grille[i][j] == 0:
+                                    grille[current_i][current_j] = 0
+                                    grille[i][j] = tour_joueur
+                                    joueur_selectionne = None
+                                    tour_joueur = 2 if tour_joueur == 1 else 1
+                else:
+                    if i is not None and j is not None and grille[i][j] == tour_joueur:
+                        joueur_selectionne = (i, j)
+                    else:
+                        if gestion_clic_souris(event.pos):
+                            tour_joueur = 2 if tour_joueur == 1 else 1
+            elif event.type == pygame.MOUSEMOTION:
                 gestion_hover_souris(event.pos)
         
-        dessiner_grille(fenetre,grille)
+        dessiner_grille(fenetre, grille, joueur_selectionne)
         dessiner_murs(fenetre)
         pygame.display.flip()
-
+        
 if __name__ == "__main__":
     main()
