@@ -121,7 +121,6 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
             if mur['orientation'] == orientation and mur['x'] == x:
                 if mur['y'] <= current_i <= mur['y'] + 1:
                     return True
-    
     # Mouvement vertical
     elif abs(di) == 1 and dj == 0:
         y = min(current_i, target_i)
@@ -130,6 +129,8 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
             if mur['orientation'] == orientation and mur['y'] == y:
                 if mur['x'] <= current_j <= mur['x'] + 1:
                     return True
+    return False
+
 
 def gestion_clic_souris(pos_souris):
     global murs
