@@ -112,6 +112,15 @@ def convertir_pos_souris_en_cell(pos):
 def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
     di = target_i - current_i
     dj = target_j - current_j
+    
+    # Mouvement horizontal
+    if di == 0 and abs(dj) == 1:
+        x = min(current_j, target_j)
+        orientation = 'V'
+        for mur in murs:
+            if mur['orientation'] == orientation and mur['x'] == x:
+                if mur['y'] <= current_i <= mur['y'] + 1:
+                    return True
 
 def gestion_clic_souris(pos_souris):
     global murs
