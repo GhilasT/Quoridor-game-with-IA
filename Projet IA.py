@@ -160,6 +160,10 @@ def get_possible_moves(i, j):
     for di, dj in directions:
         #calculer la nouvelle position
         ni, nj = i + di, j + dj
+        # Vérification mouvement de base
+        if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
+            if not mur_bloque_mouvement(i, j, ni, nj) and grille[ni][nj] == 0:
+                moves.append((ni, nj))
         
 def gestion_clic_souris(pos_souris):
     global murs
