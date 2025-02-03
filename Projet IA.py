@@ -212,7 +212,8 @@ def main():
     grille = creer_grille()
     tour_joueur = 1
     joueur_selectionne = None
-
+    mur_pose = False
+    
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
