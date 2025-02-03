@@ -46,7 +46,9 @@ def dessiner_murs(surface):
         pygame.draw.rect(surface, MUR, (x, y, largeur, hauteur))
 
 def gestion_clic_souris(pos_souris):
-    ...
+    # Cordonnées de la grille sans les marges
+    x_relatif = pos_souris[0] - MARGE
+    y_relatif = pos_souris[1] - MARGE
 
         
 def creer_grille():
