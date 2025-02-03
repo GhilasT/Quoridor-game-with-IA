@@ -110,11 +110,9 @@ def convertir_pos_souris_en_cell(pos):
     return cell_y, cell_x
 
 def gestion_clic_souris(pos_souris):
-    # Cordonnées de la grille sans les marges
     x_relatif = pos_souris[0] - MARGE
     y_relatif = pos_souris[1] - MARGE
 
-    # Verifier si le clic est dans la grille
     if x_relatif < 0 or y_relatif < 0:
         return
     if x_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
@@ -122,17 +120,14 @@ def gestion_clic_souris(pos_souris):
     if y_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
         return
 
-    # Calculer la case
     case_x = x_relatif // (TAILLE_CASE + ESPACEMENT)
     case_y = y_relatif // (TAILLE_CASE + ESPACEMENT)
     case_x = min(case_x, GRID_SIZE-2)
     case_y = min(case_y, GRID_SIZE-2)
     
-    #caculer l'offset
     offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
-    
     seuil = 10
     nouveau_mur = None
     
