@@ -304,6 +304,8 @@ def main():
                 i, j = convertir_pos_souris_en_cell(event.pos)
                 
                 if joueur_selectionne is not None:
+                    if i is None or j is None:  # Clic invalide
+                        continue
                     # Clic sur le même joueur : désélection
                     if i == joueur_selectionne[0] and j == joueur_selectionne[1]:
                         joueur_selectionne = None
