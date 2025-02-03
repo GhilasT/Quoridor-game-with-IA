@@ -131,7 +131,8 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
                     return True
     return False
 
-
+def mouvement_est_valide():
+    ...
 def gestion_clic_souris(pos_souris):
     global murs
     
