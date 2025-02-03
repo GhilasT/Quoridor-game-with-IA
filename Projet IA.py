@@ -110,6 +110,8 @@ def convertir_pos_souris_en_cell(pos):
     return cell_y, cell_x
 
 def gestion_clic_souris(pos_souris):
+    global murs
+    
     x_relatif = pos_souris[0] - MARGE
     y_relatif = pos_souris[1] - MARGE
 
@@ -212,8 +214,8 @@ def main():
     grille = creer_grille()
     tour_joueur = 1
     joueur_selectionne = None
-    mur_pose = False
-    
+    mur_pose = False 
+
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -240,13 +242,14 @@ def main():
                     if i is not None and j is not None and grille[i][j] == tour_joueur:
                         joueur_selectionne = (i, j)
                     else:
-                        gestion_clic_souris(event.pos)
+                        if gestion_clic_souris(event.pos):
+                            tour_joueur = 2 if tour_joueur == 1 else 1
             elif event.type == pygame.MOUSEMOTION:
                 gestion_hover_souris(event.pos)
         
         dessiner_grille(fenetre, grille, joueur_selectionne)
         dessiner_murs(fenetre)
         pygame.display.flip()
-
+        
 if __name__ == "__main__":
     main()
