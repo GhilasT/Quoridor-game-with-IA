@@ -138,6 +138,8 @@ def gestion_clic_souris(pos_souris):
 
     if nouveau_mur and mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
         murs.append(nouveau_mur)
+        return True
+    return False
         
 # Réutiliser du code de la fonction de gestion du clic pour gérer le survol de la souris    
 def gestion_hover_souris(pos_souris):
@@ -207,22 +209,41 @@ def dessiner_grille(fenetre, grille, joueur_selectionne):
                     
 # Boucle principale
 def main():
+    grille = creer_grille()
     tour_joueur = 1
     joueur_selectionne = None
-    grille = creer_grille()
+
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-        
-        if event.type == pygame.MOUSEBUTTONDOWN:
-                gestion_clic_souris(event.pos)
-            
-        if event.type == pygame.MOUSEMOTION:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                i, j = convertir_pos_souris_en_cell(event.pos)
+                
+                if joueur_selectionne is not None:
+                    if i is not None and j is not None and i == joueur_selectionne[0] and j == joueur_selectionne[1]:
+                        joueur_selectionne = None
+                    else:
+                        current_i, current_j = joueur_selectionne
+                        if i is not None and j is not None:
+                            di = abs(i - current_i)
+                            dj = abs(j - current_j)
+                            if (di == 1 and dj == 0) or (di == 0 and dj == 1):
+                                if grille[i][j] == 0:
+                                    grille[current_i][current_j] = 0
+                                    grille[i][j] = tour_joueur
+                                    joueur_selectionne = None
+                                    tour_joueur = 2 if tour_joueur == 1 else 1
+                else:
+                    if i is not None and j is not None and grille[i][j] == tour_joueur:
+                        joueur_selectionne = (i, j)
+                    else:
+                        gestion_clic_souris(event.pos)
+            elif event.type == pygame.MOUSEMOTION:
                 gestion_hover_souris(event.pos)
         
-        dessiner_grille(fenetre,grille)
+        dessiner_grille(fenetre, grille, joueur_selectionne)
         dessiner_murs(fenetre)
         pygame.display.flip()
 
