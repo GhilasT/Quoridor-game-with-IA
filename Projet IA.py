@@ -15,6 +15,8 @@ fenetre = pygame.display.set_mode((largeur, hauteur))
 pygame.display.set_caption("Quoridor")
 
 # Constantes de couleurs
+FOND = (157, 235, 235)
+CASE = (69, 79, 79)
 BLANC = (255, 255, 255)
 NOIR = (0, 0, 0)
 
@@ -24,11 +26,11 @@ def creer_grille():
     return grille
 
 def dessiner_grille(fenetre):
-    fenetre.fill(BLANC)
+    fenetre.fill(FOND)
     for x in range(9):
         for y in range(9):
             rect = pygame.Rect(x * (taille_case + espacement) + marge, y * (taille_case + espacement) + marge, taille_case, taille_case)
-            pygame.draw.rect(fenetre, NOIR, rect, 1)
+            pygame.draw.rect(fenetre, CASE, rect)
     pygame.display.flip()
 
 # Boucle principale
