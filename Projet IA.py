@@ -8,7 +8,7 @@ pygame.init()
 GRID_SIZE = 9
 LARGEUR, HAUTEUR = 900, 900
 MARGE = 50
-ESPACEMENT = 5
+ESPACEMENT = 8
 TAILLE_CASE = (LARGEUR - 2*MARGE - 8*ESPACEMENT) // GRID_SIZE
 
 # Créer la fenêtre
@@ -22,6 +22,21 @@ BLANC = (255, 255, 255)
 NOIR = (0, 0, 0)
 JOUEUR1 = (130, 9, 5)
 JOUEUR2 = (11, 30, 74)
+MUR = (35, 82, 250)
+murs = [
+    # {'x': 2, 'y': 3, 'orientation': 'H'},  #Exemple Mur horizontal entre les cases
+    # {'x': 5, 'y': 4, 'orientation': 'V'},  #Exemple Mur vertical entre les cases
+]
+
+def dessiner_murs(surface):
+    for mur in murs:
+        if mur['orientation'] == 'H':
+            # Calcul horizontal avec marges et espacements
+            x = MARGE + mur['x'] * (TAILLE_CASE + ESPACEMENT)
+            y = MARGE + (mur['y'] + 1) * (TAILLE_CASE + ESPACEMENT) - ESPACEMENT
+            largeur = 2 * TAILLE_CASE + ESPACEMENT
+            hauteur = ESPACEMENT
+
 
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
@@ -47,7 +62,6 @@ def dessiner_grille(fenetre, grille):
                 pygame.draw.circle(fenetre, JOUEUR1, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
             elif grille[i][j] == 2:
                 pygame.draw.circle(fenetre, JOUEUR2, (j * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2, i * (TAILLE_CASE + ESPACEMENT) + MARGE + TAILLE_CASE // 2), TAILLE_CASE // 3)
-    pygame.display.flip()
 
 # Boucle principale
 def main():
@@ -57,9 +71,10 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-    
-        dessiner_grille(fenetre,grille)
 
+        dessiner_grille(fenetre,grille)
+        dessiner_murs(fenetre)
+        pygame.display.flip()
 
 if __name__ == "__main__":
     main()
