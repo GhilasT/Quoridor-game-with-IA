@@ -43,7 +43,7 @@ def dessiner_murs(surface):
             largeur = ESPACEMENT
             hauteur = 2 * TAILLE_CASE + ESPACEMENT
 
-              
+        pygame.draw.rect(surface, MUR, (x, y, largeur, hauteur))        
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
     # 0 pour une cellule vide
