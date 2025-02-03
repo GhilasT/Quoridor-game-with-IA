@@ -252,7 +252,7 @@ def creer_grille():
     grille[8][4] = 2
     return grille
 
-def dessiner_grille(fenetre, grille, joueur_selectionne):
+def dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves):
     fenetre.fill(FOND)
     for i in range(9):
         for j in range(9):
@@ -273,7 +273,20 @@ def dessiner_grille(fenetre, grille, joueur_selectionne):
                 pygame.draw.circle(fenetre, JOUEUR2, pos, TAILLE_CASE//3)
                 if joueur_selectionne == (i, j):
                     pygame.draw.circle(fenetre, BLANC, pos, TAILLE_CASE//3 + 2, 2)
-                    
+    # Dessiner les highlights
+    if joueur_selectionne is not None:
+        surface_highlight = pygame.Surface((TAILLE_CASE, TAILLE_CASE), pygame.SRCALPHA)
+        surface_highlight.fill(HIGHLIGHT)
+        
+        for mi, mj in possible_moves:
+            rect = pygame.Rect(
+                mj * (TAILLE_CASE + ESPACEMENT) + MARGE,
+                mi * (TAILLE_CASE + ESPACEMENT) + MARGE,
+                TAILLE_CASE,
+                TAILLE_CASE
+            )
+            fenetre.blit(surface_highlight, rect.topleft)
+            
 # Boucle principale
 def main():
     grille = creer_grille()
