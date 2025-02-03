@@ -89,6 +89,12 @@ def convertir_pos_souris_en_cell(pos):
     x_rel = x - MARGE
     y_rel = y - MARGE
     
+    # Vérifier si la souris n'est pas hors de la grille (a gauche ou en haut)
+    if x_rel < 0 or y_rel < 0:
+        return None, None
+
+    
+    
     
 def gestion_clic_souris(pos_souris):
     # Cordonnées de la grille sans les marges
