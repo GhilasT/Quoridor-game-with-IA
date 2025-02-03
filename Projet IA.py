@@ -180,6 +180,9 @@ def main():
         if event.type == pygame.MOUSEBUTTONDOWN:
                 gestion_clic_souris(event.pos)
         
+        if event.type == pygame.MOUSEMOTION:
+                gestion_hover_souris(event.pos)
+        
         dessiner_grille(fenetre,grille)
         dessiner_murs(fenetre)
         pygame.display.flip()
