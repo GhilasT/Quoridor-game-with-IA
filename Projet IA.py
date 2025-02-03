@@ -58,6 +58,12 @@ def gestion_clic_souris(pos_souris):
     if y_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
         return
 
+    # Calculer la case et l'offset 
+    case_x = x_relatif // (TAILLE_CASE + ESPACEMENT)
+    case_y = y_relatif // (TAILLE_CASE + ESPACEMENT)
+    offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
+    offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
+
 
         
 def creer_grille():
