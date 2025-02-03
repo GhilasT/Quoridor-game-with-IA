@@ -84,7 +84,8 @@ def mur_est_valide(mur):
             return False
     
     return True
-
+def convertir_pos_souris_en_cell(pos):
+    ...
 def gestion_clic_souris(pos_souris):
     # Cordonnées de la grille sans les marges
     x_relatif = pos_souris[0] - MARGE
