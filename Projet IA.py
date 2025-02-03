@@ -154,6 +154,9 @@ def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur, g
     
     return False
 
+def get_possible_moves():
+    pass
+
 def gestion_clic_souris(pos_souris):
     global murs
     
