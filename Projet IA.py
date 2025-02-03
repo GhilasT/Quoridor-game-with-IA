@@ -53,7 +53,14 @@ def dessiner_murs(surface):
             y = MARGE + (mur_preview['y'] + 1) * (TAILLE_CASE + ESPACEMENT) - ESPACEMENT
             largeur = 2 * TAILLE_CASE + ESPACEMENT
             hauteur = ESPACEMENT
-            
+        else:
+            x = MARGE + (mur_preview['x'] + 1) * (TAILLE_CASE + ESPACEMENT) - ESPACEMENT
+            y = MARGE + mur_preview['y'] * (TAILLE_CASE + ESPACEMENT)
+            largeur = ESPACEMENT
+            hauteur = 2 * TAILLE_CASE + ESPACEMENT
+        
+        pygame.draw.rect(surface, MUR_PREVIEW, (x, y, largeur, hauteur))
+        
 def mur_est_valide(mur):
     if mur['orientation'] == 'H':
         return (0 <= mur['x'] <= GRID_SIZE-2 and 
