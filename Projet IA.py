@@ -293,6 +293,7 @@ def main():
     tour_joueur = 1
     joueur_selectionne = None
     mur_pose = False 
+    possible_moves = []
 
     while True: 
         for event in pygame.event.get():
