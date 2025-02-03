@@ -154,7 +154,7 @@ def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur, g
     
     return False
 
-def get_possible_moves(i, j, grille):
+def get_possible_moves(i, j, grille,tour_joueur):
     moves = []
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     for di, dj in directions:
@@ -164,6 +164,15 @@ def get_possible_moves(i, j, grille):
         if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
             if not mur_bloque_mouvement(i, j, ni, nj) and grille[ni][nj] == 0:
                 moves.append((ni, nj))
+            elif grille[ni][nj] not in (0, tour_joueur):
+                # Vérification saut
+                ni2, nj2 = ni + di, nj + dj
+                if 0 <= ni2 < GRID_SIZE and 0 <= nj2 < GRID_SIZE:
+                    if (not mur_bloque_mouvement(i, j, ni, nj) and 
+                        not mur_bloque_mouvement(ni, nj, ni2, nj2) and 
+                        grille[ni2][nj2] == 0):
+                        moves.append((ni2, nj2))
+    return moves
         
 def gestion_clic_souris(pos_souris):
     global murs
