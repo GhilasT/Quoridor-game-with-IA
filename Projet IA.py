@@ -273,12 +273,8 @@ def main():
                     else:
                         current_i, current_j = joueur_selectionne
                         if i is not None and j is not None:
-                            di = abs(i - current_i)
-                            dj = abs(j - current_j)
-                            if ((di == 1 and dj == 0) or (di == 0 and dj == 1)) and \
-                                not mur_bloque_mouvement(current_i, current_j, i, j) and \
-                                grille[i][j] == 0:
-                                    
+                           if mouvement_est_valide(current_i, current_j, i, j, tour_joueur):
+                                if grille[i][j] == 0:
                                     grille[current_i][current_j] = 0
                                     grille[i][j] = tour_joueur
                                     joueur_selectionne = None
