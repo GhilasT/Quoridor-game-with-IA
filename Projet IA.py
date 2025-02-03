@@ -64,7 +64,12 @@ def gestion_clic_souris(pos_souris):
     offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
-
+    # Détecter l'orientation
+    seuil = 10  # Seuil de détection
+    if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
+        murs.append({'x': case_x, 'y': case_y, 'orientation': 'H'})
+    elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
+        murs.append({'x': case_x, 'y': case_y, 'orientation': 'V'})
         
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
@@ -99,7 +104,7 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-
+    
         dessiner_grille(fenetre,grille)
         dessiner_murs(fenetre)
         pygame.display.flip()
