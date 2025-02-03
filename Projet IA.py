@@ -7,7 +7,8 @@ pygame.init()
 # Définir les dimensions de la fenêtre
 largeur, hauteur = 900, 900
 marge = 50
-taille_case = (largeur - 2*marge) // 9
+espacement = 5
+taille_case = (largeur - 2*marge - 8*espacement) // 9
 
 # Créer la fenêtre
 fenetre = pygame.display.set_mode((largeur, hauteur))
@@ -26,7 +27,7 @@ def dessiner_grille(fenetre):
     fenetre.fill(BLANC)
     for x in range(9):
         for y in range(9):
-            rect = pygame.Rect(x * (taille_case) + marge, y * (taille_case) + marge, taille_case, taille_case)
+            rect = pygame.Rect(x * (taille_case + espacement) + marge, y * (taille_case + espacement) + marge, taille_case, taille_case)
             pygame.draw.rect(fenetre, NOIR, rect, 1)
     pygame.display.flip()
 
