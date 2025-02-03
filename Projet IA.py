@@ -131,7 +131,7 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
                     return True
     return False
 
-def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur):
+def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur, grille):
     di = target_i - current_i
     dj = target_j - current_j
     
@@ -139,6 +139,18 @@ def mouvement_est_valide(current_i, current_j, target_i, target_j,tour_joueur):
     if (abs(di) == 1 and dj == 0) or (di == 0 and abs(dj) == 1):
         return not mur_bloque_mouvement(current_i, current_j, target_i, target_j)
     
+    # Saut par-dessus l'adversaire (deux cases)
+    if (abs(di) == 2 and dj == 0) or (di == 0 and abs(dj) == 2):
+        mi = current_i + di//2 # Case intermédiaire
+        mj = current_j + dj//2
+        
+        # Vérifie l'adversaire sur la case intermédiaire
+        if 0 <= mi < GRID_SIZE and 0 <= mj < GRID_SIZE:  # Ajout de vérifications de limites
+            if grille[mi][mj] not in (0, tour_joueur):
+                return (not mur_bloque_mouvement(current_i, current_j, mi, mj) and 
+                        not mur_bloque_mouvement(mi, mj, target_i, target_j))
+    
+    return False
 
 def gestion_clic_souris(pos_souris):
     global murs
