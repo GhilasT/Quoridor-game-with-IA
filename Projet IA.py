@@ -109,23 +109,15 @@ def gestion_clic_souris(pos_souris):
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
     
-    # Détecter l'orientation
-    seuil = 10  # Seuil de détection
-    if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
-        murs.append({'x': case_x, 'y': case_y, 'orientation': 'H'})
-    elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
-        murs.append({'x': case_x, 'y': case_y, 'orientation': 'V'})
-        
+    seuil = 10
     nouveau_mur = None
+    
     if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
         nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'H'}
     elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
         nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'V'}
 
-    if nouveau_mur: 
-        if mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
-            murs.append(nouveau_mur)
-    if nouveau_mur and mur_est_valide(nouveau_mur):
+    if nouveau_mur and mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
         murs.append(nouveau_mur)
         
 # Réutiliser du code de la fonction de gestion du clic pour gérer le survol de la souris    
@@ -197,7 +189,7 @@ def main():
         
         if event.type == pygame.MOUSEBUTTONDOWN:
                 gestion_clic_souris(event.pos)
-        
+            
         if event.type == pygame.MOUSEMOTION:
                 gestion_hover_souris(event.pos)
         
