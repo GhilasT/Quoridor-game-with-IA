@@ -69,6 +69,10 @@ def conflit(mur1, mur2):
         return (mur1['y'] == mur2['y'] and 
                 mur1['x'] <= mur2['x'] + 1 and 
                 mur1['x'] + 1 >= mur2['x'])
+    else:
+        return (mur1['x'] == mur2['x'] and 
+                mur1['y'] <= mur2['y'] + 1 and 
+                mur1['y'] + 1 >= mur2['y'])
         
 def mur_est_valide(mur):
     if mur['orientation'] == 'H':
