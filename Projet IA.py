@@ -28,6 +28,9 @@ def creer_grille():
     # 1 pour le joueur 1
     # 2 pour le joueur 2
     grille = [[0 for _ in range(9)] for _ in range(9)]
+    
+    grille[0][4] = 1
+    grille[8][4] = 2
     return grille
 
 def dessiner_grille(fenetre, grille):
@@ -39,9 +42,9 @@ def dessiner_grille(fenetre, grille):
     
     for i in range(9):
         for j in range(9):
-            if grille[i][j] == 3:
+            if grille[i][j] == 1:
                 pygame.draw.circle(fenetre, JOUEUR1, (j * (taille_case + espacement) + marge + taille_case // 2, i * (taille_case + espacement) + marge + taille_case // 2), taille_case // 3)
-            elif grille[i][j] == 4:
+            elif grille[i][j] == 2:
                 pygame.draw.circle(fenetre, JOUEUR2, (j * (taille_case + espacement) + marge + taille_case // 2, i * (taille_case + espacement) + marge + taille_case // 2), taille_case // 3)
     pygame.display.flip()
 
