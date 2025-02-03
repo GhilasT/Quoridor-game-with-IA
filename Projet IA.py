@@ -62,7 +62,8 @@ def dessiner_murs(surface):
         pygame.draw.rect(surface, MUR_PREVIEW, (x, y, largeur, hauteur))
 
 def conflit(mur1, mur2):
-    ...
+    if mur1['orientation'] != mur2['orientation']:
+        return False
         
 def mur_est_valide(mur):
     if mur['orientation'] == 'H':
