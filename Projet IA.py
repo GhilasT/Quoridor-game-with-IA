@@ -20,6 +20,10 @@ def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut de 0 (pour dire que les cellules sont vide)
     grille = [[0 for _ in range(9)] for _ in range(9)]
     return grille
+
+def dessiner_grille(fenetre):
+    fenetre.fill(BLANC)
+
 # Boucle principale
 def main():
     #TODO ajouter un quit event
