@@ -19,6 +19,8 @@ FOND = (64, 36, 18)
 CASE = (250, 233, 192)
 BLANC = (255, 255, 255)
 NOIR = (0, 0, 0)
+JOUEUR1 = (130, 9, 5)
+JOUEUR2 = (11, 30, 74)
 
 def creer_grille():
     # Initialiser une grille 9x9 avec des valeurs par défaut
@@ -34,6 +36,7 @@ def dessiner_grille(fenetre):
         for y in range(9):
             rect = pygame.Rect(x * (taille_case + espacement) + marge, y * (taille_case + espacement) + marge, taille_case, taille_case)
             pygame.draw.rect(fenetre, CASE, rect)
+    
     pygame.display.flip()
 
 # Boucle principale
