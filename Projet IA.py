@@ -30,24 +30,31 @@ def creer_grille():
     grille = [[0 for _ in range(9)] for _ in range(9)]
     return grille
 
-def dessiner_grille(fenetre):
+def dessiner_grille(fenetre, grille):
     fenetre.fill(FOND)
     for x in range(9):
         for y in range(9):
             rect = pygame.Rect(x * (taille_case + espacement) + marge, y * (taille_case + espacement) + marge, taille_case, taille_case)
             pygame.draw.rect(fenetre, CASE, rect)
     
+    for i in range(9):
+        for j in range(9):
+            if grille[i][j] == 3:
+                pygame.draw.circle(fenetre, JOUEUR1, (j * (taille_case + espacement) + marge + taille_case // 2, i * (taille_case + espacement) + marge + taille_case // 2), taille_case // 3)
+            elif grille[i][j] == 4:
+                pygame.draw.circle(fenetre, JOUEUR2, (j * (taille_case + espacement) + marge + taille_case // 2, i * (taille_case + espacement) + marge + taille_case // 2), taille_case // 3)
     pygame.display.flip()
 
 # Boucle principale
 def main():
+    grille = creer_grille()
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
     
-        dessiner_grille(fenetre)
+        dessiner_grille(fenetre,grille)
 
 
 if __name__ == "__main__":
