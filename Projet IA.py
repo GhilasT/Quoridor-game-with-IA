@@ -273,7 +273,7 @@ def main():
                     else:
                         current_i, current_j = joueur_selectionne
                         if i is not None and j is not None:
-                           if mouvement_est_valide(current_i, current_j, i, j, tour_joueur):
+                           if mouvement_est_valide(current_i, current_j, i, j, tour_joueur, grille):
                                 if grille[i][j] == 0:
                                     grille[current_i][current_j] = 0
                                     grille[i][j] = tour_joueur
