@@ -1,5 +1,6 @@
 import sys
 import pygame
+from collections import deque
 
 # Initialiser Pygame
 pygame.init()
@@ -183,8 +184,12 @@ def find_player_position(grille, player_num):
                 return (i, j)
     return None        
 
-def has_path():
-    pass
+def has_path(start_pos):
+    if start_pos is None:
+        return False
+    visited = set()
+    queue = deque([start_pos])
+    visited.add(start_pos)
 
 def gestion_clic_souris(pos_souris):
     global murs
