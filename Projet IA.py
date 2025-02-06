@@ -184,12 +184,26 @@ def find_player_position(grille, player_num):
                 return (i, j)
     return None        
 
-def has_path(start_pos):
+def has_path(start_pos , target_row, walls):
     if start_pos is None:
         return False
     visited = set()
     queue = deque([start_pos])
     visited.add(start_pos)
+
+    while queue:
+        i, j = queue.popleft()
+        if i == target_row:
+            return True
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for di, dj in directions:
+            ni, nj = i + di, j + dj
+            if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
+                if not mur_bloque_mouvement(i, j, ni, nj, walls):
+                    if (ni, nj) not in visited:
+                        visited.add((ni, nj))
+                        queue.append((ni, nj))
+    return False
 
 def gestion_clic_souris(pos_souris):
     global murs
