@@ -216,6 +216,15 @@ def check_victoire(grille):
         if grille[0][j] == 2:
             return 2
 
+def afficher_victoire(vainqueur):
+    font = pygame.font.Font(None, 74)
+    texte = font.render(f'Le Joueur {vainqueur} a gagné !', True, VICTOIRE, FOND)
+    rect_texte = texte.get_rect(center=(LARGEUR//2, HAUTEUR//2))
+    fenetre.blit(texte, rect_texte)
+    pygame.display.flip()
+    pygame.time.wait(3000)
+    pygame.quit()
+
 def gestion_clic_souris(pos_souris, grille):
     global murs
     
