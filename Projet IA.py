@@ -26,6 +26,8 @@ JOUEUR2 = (11, 30, 74)
 MUR = (35, 82, 250)
 MUR_PREVIEW = (78, 126, 255)
 HIGHLIGHT = (173, 216, 230, 100)
+CASE_SOMBRE = (200, 183, 142)
+
 
 murs = [
     # {'x': 2, 'y': 3, 'orientation': 'H'},  #Exemple Mur horizontal entre les cases
@@ -297,8 +299,11 @@ def dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves):
     fenetre.fill(FOND)
     for i in range(9):
         for j in range(9):
-            rect = pygame.Rect(j * (TAILLE_CASE + ESPACEMENT) + MARGE, i * (TAILLE_CASE + ESPACEMENT) + MARGE, TAILLE_CASE, TAILLE_CASE)
-            pygame.draw.rect(fenetre, CASE, rect)
+            couleur = CASE_SOMBRE if i in (0, 8) else CASE
+            rect = pygame.Rect(j * (TAILLE_CASE + ESPACEMENT) + MARGE, 
+                             i * (TAILLE_CASE + ESPACEMENT) + MARGE, 
+                             TAILLE_CASE, TAILLE_CASE)
+            pygame.draw.rect(fenetre, couleur, rect)
 
     for i in range(9):
         for j in range(9):
