@@ -1,5 +1,6 @@
 import sys
 import pygame
+from collections import deque
 
 # Initialiser Pygame
 pygame.init()
@@ -111,7 +112,9 @@ def convertir_pos_souris_en_cell(pos):
 
     return cell_y, cell_x
 
-def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
+def mur_bloque_mouvement(current_i, current_j, target_i, target_j, walls=None):
+    if walls is None:
+        walls = murs
     di = target_i - current_i
     dj = target_j - current_j
     
@@ -119,7 +122,7 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
     if di == 0 and abs(dj) == 1:
         x = min(current_j, target_j)
         orientation = 'V'
-        for mur in murs:
+        for mur in walls:
             if mur['orientation'] == orientation and mur['x'] == x:
                 if mur['y'] <= current_i <= mur['y'] + 1:
                     return True
@@ -127,7 +130,7 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
     elif abs(di) == 1 and dj == 0:
         y = min(current_i, target_i)
         orientation = 'H'
-        for mur in murs:
+        for mur in walls:
             if mur['orientation'] == orientation and mur['y'] == y:
                 if mur['x'] <= current_j <= mur['x'] + 1:
                     return True
@@ -174,38 +177,76 @@ def get_possible_moves(i, j, tour_joueur,grille):
                         moves.append((ni2, nj2))
     return moves
         
-def gestion_clic_souris(pos_souris):
+def find_player_position(grille, player_num):
+    for i in range(GRID_SIZE):
+        for j in range(GRID_SIZE):
+            if grille[i][j] == player_num:
+                return (i, j)
+    return None        
+
+def has_path(start_pos , target_row, walls):
+    if start_pos is None:
+        return False
+    visited = set()
+    queue = deque([start_pos])
+    visited.add(start_pos)
+
+    while queue:
+        i, j = queue.popleft()
+        if i == target_row:
+            return True
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for di, dj in directions:
+            ni, nj = i + di, j + dj
+            if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
+                if not mur_bloque_mouvement(i, j, ni, nj, walls):
+                    if (ni, nj) not in visited:
+                        visited.add((ni, nj))
+                        queue.append((ni, nj))
+    return False
+
+def gestion_clic_souris(pos_souris, grille):
     global murs
     
     x_relatif = pos_souris[0] - MARGE
     y_relatif = pos_souris[1] - MARGE
 
     if x_relatif < 0 or y_relatif < 0:
-        return
-    if x_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
-        return
-    if y_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
-        return
+        return False
+
+    max_grid = GRID_SIZE * (TAILLE_CASE + ESPACEMENT) - ESPACEMENT
+    if x_relatif > max_grid or y_relatif > max_grid:
+        return False
 
     case_x = x_relatif // (TAILLE_CASE + ESPACEMENT)
     case_y = y_relatif // (TAILLE_CASE + ESPACEMENT)
     case_x = min(case_x, GRID_SIZE-2)
     case_y = min(case_y, GRID_SIZE-2)
-    
+
     offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
     seuil = 10
     nouveau_mur = None
-    
+
     if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
         nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'H'}
     elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
         nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'V'}
 
     if nouveau_mur and mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
-        murs.append(nouveau_mur)
-        return True
+        temp_murs = murs.copy()
+        temp_murs.append(nouveau_mur)
+        player1_pos = find_player_position(grille, 1)
+        player2_pos = find_player_position(grille, 2)
+        
+        if (player1_pos is not None and player2_pos is not None and
+            has_path(player1_pos, 8, temp_murs) and
+            has_path(player2_pos, 0, temp_murs)):
+            murs.append(nouveau_mur)
+            return True
+        else:
+            return False
     return False
         
 # Réutiliser du code de la fonction de gestion du clic pour gérer le survol de la souris    
@@ -331,7 +372,7 @@ def main():
                         
                         # Clic pour poser un mur
                         else:
-                            if gestion_clic_souris(event.pos):
+                            if gestion_clic_souris(event.pos,grille):
                                 possible_moves = []  # Reset les highlights
                                 tour_joueur = 2 if tour_joueur == 1 else 1
             
