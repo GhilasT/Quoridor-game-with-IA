@@ -212,6 +212,10 @@ def check_victoire(grille):
         if grille[GRID_SIZE-1][j] == 1:
             return 1
         
+    for j in range(GRID_SIZE):
+        if grille[0][j] == 2:
+            return 2
+
 def gestion_clic_souris(pos_souris, grille):
     global murs
     
