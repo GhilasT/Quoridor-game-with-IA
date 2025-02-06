@@ -111,7 +111,9 @@ def convertir_pos_souris_en_cell(pos):
 
     return cell_y, cell_x
 
-def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
+def mur_bloque_mouvement(current_i, current_j, target_i, target_j, walls=None):
+    if walls is None:
+        walls = murs
     di = target_i - current_i
     dj = target_j - current_j
     
@@ -119,7 +121,7 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
     if di == 0 and abs(dj) == 1:
         x = min(current_j, target_j)
         orientation = 'V'
-        for mur in murs:
+        for mur in walls:
             if mur['orientation'] == orientation and mur['x'] == x:
                 if mur['y'] <= current_i <= mur['y'] + 1:
                     return True
@@ -127,7 +129,7 @@ def mur_bloque_mouvement(current_i, current_j, target_i, target_j):
     elif abs(di) == 1 and dj == 0:
         y = min(current_i, target_i)
         orientation = 'H'
-        for mur in murs:
+        for mur in walls:
             if mur['orientation'] == orientation and mur['y'] == y:
                 if mur['x'] <= current_j <= mur['x'] + 1:
                     return True
