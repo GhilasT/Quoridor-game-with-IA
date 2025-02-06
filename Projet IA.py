@@ -206,8 +206,12 @@ def has_path(start_pos , target_row, walls):
                         visited.add((ni, nj))
                         queue.append((ni, nj))
     return False
-def check_victoire():
-    pass
+
+def check_victoire(grille):
+    for j in range(GRID_SIZE):
+        if grille[GRID_SIZE-1][j] == 1:
+            return 1
+        
 def gestion_clic_souris(pos_souris, grille):
     global murs
     
