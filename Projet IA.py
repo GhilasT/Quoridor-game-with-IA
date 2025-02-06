@@ -176,8 +176,12 @@ def get_possible_moves(i, j, tour_joueur,grille):
                         moves.append((ni2, nj2))
     return moves
         
-def find_player_position():
-    pass        
+def find_player_position(grille, player_num):
+    for i in range(GRID_SIZE):
+        for j in range(GRID_SIZE):
+            if grille[i][j] == player_num:
+                return (i, j)
+    return None        
 
 def gestion_clic_souris(pos_souris):
     global murs
