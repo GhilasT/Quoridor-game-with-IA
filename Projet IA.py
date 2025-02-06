@@ -205,38 +205,48 @@ def has_path(start_pos , target_row, walls):
                         queue.append((ni, nj))
     return False
 
-def gestion_clic_souris(pos_souris):
+def gestion_clic_souris(pos_souris, grille):
     global murs
     
     x_relatif = pos_souris[0] - MARGE
     y_relatif = pos_souris[1] - MARGE
 
     if x_relatif < 0 or y_relatif < 0:
-        return
-    if x_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
-        return
-    if y_relatif > GRID_SIZE*(TAILLE_CASE + ESPACEMENT) - ESPACEMENT:
-        return
+        return False
+
+    max_grid = GRID_SIZE * (TAILLE_CASE + ESPACEMENT) - ESPACEMENT
+    if x_relatif > max_grid or y_relatif > max_grid:
+        return False
 
     case_x = x_relatif // (TAILLE_CASE + ESPACEMENT)
     case_y = y_relatif // (TAILLE_CASE + ESPACEMENT)
     case_x = min(case_x, GRID_SIZE-2)
     case_y = min(case_y, GRID_SIZE-2)
-    
+
     offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
     seuil = 10
     nouveau_mur = None
-    
+
     if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
         nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'H'}
     elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
         nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'V'}
 
     if nouveau_mur and mur_est_valide(nouveau_mur) and nouveau_mur not in murs:
-        murs.append(nouveau_mur)
-        return True
+        temp_murs = murs.copy()
+        temp_murs.append(nouveau_mur)
+        player1_pos = find_player_position(grille, 1)
+        player2_pos = find_player_position(grille, 2)
+        
+        if (player1_pos is not None and player2_pos is not None and
+            has_path(player1_pos, 8, temp_murs) and
+            has_path(player2_pos, 0, temp_murs)):
+            murs.append(nouveau_mur)
+            return True
+        else:
+            return False
     return False
         
 # Réutiliser du code de la fonction de gestion du clic pour gérer le survol de la souris    
