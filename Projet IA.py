@@ -372,7 +372,7 @@ def main():
                         
                         # Clic pour poser un mur
                         else:
-                            if gestion_clic_souris(event.pos):
+                            if gestion_clic_souris(event.pos,grille):
                                 possible_moves = []  # Reset les highlights
                                 tour_joueur = 2 if tour_joueur == 1 else 1
             
