@@ -27,7 +27,7 @@ MUR = (35, 82, 250)
 MUR_PREVIEW = (78, 126, 255)
 HIGHLIGHT = (173, 216, 230, 100)
 CASE_SOMBRE = (200, 183, 142)
-
+VICTOIRE = (255, 215, 0)
 
 murs = [
     # {'x': 2, 'y': 3, 'orientation': 'H'},  #Exemple Mur horizontal entre les cases
@@ -222,9 +222,7 @@ def afficher_victoire(vainqueur):
     rect_texte = texte.get_rect(center=(LARGEUR//2, HAUTEUR//2))
     fenetre.blit(texte, rect_texte)
     pygame.display.flip()
-    pygame.time.wait(3000)
-    pygame.quit()
-
+    
 def gestion_clic_souris(pos_souris, grille):
     global murs
     
@@ -359,6 +357,10 @@ def main():
     possible_moves = []
     
     while True: 
+        vainqueur = check_victoire(grille)
+        if vainqueur:
+            afficher_victoire(vainqueur)
+            
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
