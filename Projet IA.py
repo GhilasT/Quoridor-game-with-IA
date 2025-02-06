@@ -183,6 +183,9 @@ def find_player_position(grille, player_num):
                 return (i, j)
     return None        
 
+def has_path():
+    pass
+
 def gestion_clic_souris(pos_souris):
     global murs
     
