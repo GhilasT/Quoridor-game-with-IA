@@ -228,9 +228,10 @@ def gestion_clic_souris(pos_souris, grille):
     offset_x = x_relatif % (TAILLE_CASE + ESPACEMENT)
     offset_y = y_relatif % (TAILLE_CASE + ESPACEMENT)
 
-    seuil = 10
+    seuil = 10  # Même seuil que dans gestion_hover_souris
     nouveau_mur = None
 
+    # Utiliser la même logique de détection que dans gestion_hover_souris
     if abs(offset_y - (TAILLE_CASE + ESPACEMENT)) < seuil:
         nouveau_mur = {'x': case_x, 'y': case_y, 'orientation': 'H'}
     elif abs(offset_x - (TAILLE_CASE + ESPACEMENT)) < seuil:
@@ -350,13 +351,15 @@ def main():
                 i, j = convertir_pos_souris_en_cell(event.pos)
                 
                 if joueur_selectionne is not None:
-                    if i is None or j is None:  # Clic invalide
-                        continue
-                    # Clic sur le même joueur : désélection
-                    if i == joueur_selectionne[0] and j == joueur_selectionne[1]:
+                    # Un joueur est déjà sélectionné
+                    if i is None or j is None:  # Clic invalide ou sur un espace entre cases
+                        # Désélectionner le joueur si on clique ailleurs
                         joueur_selectionne = None
                         possible_moves = []
-                    
+                    # Clic sur le même joueur : désélection
+                    elif i == joueur_selectionne[0] and j == joueur_selectionne[1]:
+                        joueur_selectionne = None
+                        possible_moves = []
                     # Tentative de déplacement
                     else:
                         current_i, current_j = joueur_selectionne
@@ -369,21 +372,17 @@ def main():
                                 tour_joueur = 2 if tour_joueur == 1 else 1
                 
                 else:  # Aucun joueur sélectionné
-                    if i is not None and j is not None:
-                        # Clic sur un joueur actif
-                        if grille[i][j] == tour_joueur:
-                            joueur_selectionne = (i, j)
-                            possible_moves = get_possible_moves(i, j, tour_joueur, grille)
-                        
-                        # Clic pour poser un mur
-                        else:
-                            if gestion_clic_souris(event.pos,grille):
-                                possible_moves = []  # Reset les highlights
-                                tour_joueur = 2 if tour_joueur == 1 else 1
-            
+                    # Essayer de placer un mur uniquement si aucun joueur n'est sélectionné
+                    if gestion_clic_souris(event.pos, grille):
+                        possible_moves = []  # Reset les highlights
+                        tour_joueur = 2 if tour_joueur == 1 else 1
+                    elif i is not None and j is not None and grille[i][j] == tour_joueur:
+                        # Sélectionner un joueur si le clic est sur un joueur actif
+                        joueur_selectionne = (i, j)
+                        possible_moves = get_possible_moves(i, j, tour_joueur, grille)
             elif event.type == pygame.MOUSEMOTION:
                 gestion_hover_souris(event.pos)
-        
+                    
         # Dessin
         dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
         dessiner_murs(fenetre)
