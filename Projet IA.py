@@ -360,6 +360,23 @@ def main_menu():
                 sys.exit()
 
         pygame.display.flip()
+        
+def evaluer_position(grille, murs):
+    """Évalue la position actuelle du jeu pour le joueur IA (joueur 2)"""
+    pos_j1 = find_player_position(grille, 1)
+    pos_j2 = find_player_position(grille, 2)
+    
+    if pos_j1 is None or pos_j2 is None:
+        return 0
+    
+    # Distance jusqu'à l'objectif (ligne 0 pour joueur 2, ligne 8 pour joueur 1)
+    distance_j1 = pos_j1[0]  # Distance de joueur 1 à sa ligne d'arrivée (ligne 8)
+    distance_j2 = 8 - pos_j2[0]  # Distance de joueur 2 à sa ligne d'arrivée (ligne 0)
+    
+    # Plus la distance du joueur 1 est grande, mieux c'est pour l'IA (joueur 2)
+    # Plus la distance du joueur 2 est petite, mieux c'est pour l'IA (joueur 2)
+    return distance_j1 - 2 * distance_j2
+
 
 def difficulty_menu():
     button_width = 450
