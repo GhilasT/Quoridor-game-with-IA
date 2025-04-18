@@ -609,6 +609,12 @@ def mainPVP():
                             if grille[i][j] == 0:
                                 grille[current_i][current_j] = 0
                                 grille[i][j] = tour_joueur
+                                
+                                # Vérification victoire
+                                if (tour_joueur == 1 and i == 8) or (tour_joueur == 2 and i == 0):
+                                    show_winner(tour_joueur)
+                                    return
+                                
                                 joueur_selectionne = None
                                 possible_moves = []
                                 tour_joueur = 2 if tour_joueur == 1 else 1
@@ -626,6 +632,6 @@ def mainPVP():
         dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
         dessiner_murs(fenetre)
         pygame.display.flip()
-
+        
 if __name__ == "__main__":
     main_menu()
