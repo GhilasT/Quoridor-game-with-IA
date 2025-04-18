@@ -362,17 +362,18 @@ def main_menu():
         pygame.display.flip()
 
 def difficulty_menu():
-    button_width = 450  # Réduction de la largeur des boutons
-    button_height = 80  # Réduction de la hauteur des boutons
-    button_spacing = 40  # Réduction de l'espacement entre les boutons
-    total_height = button_height * 3 + button_spacing * 2 + 100  # Ajout de 100 pour le texte "Difficulté :"
+    button_width = 450
+    button_height = 80
+    button_spacing = 40
+    total_height = button_height * 3 + button_spacing * 2 + 100
 
     while True:
         fenetre.fill(FOND)
         draw_text("Difficulté :", font_title, BUTTON_COLOR, fenetre, LARGEUR // 2, 100)
 
-        start_y = (HAUTEUR - total_height) // 2 + 100  # Ajustement pour centrer les boutons
-        draw_button(fenetre, "Facile", (LARGEUR - button_width) // 2, start_y, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Facile sélectionné"))
+        start_y = (HAUTEUR - total_height) // 2 + 100
+        # Utiliser mainPVE avec des profondeurs différentes selon la difficulté
+        draw_button(fenetre, "Facile", (LARGEUR - button_width) // 2, start_y, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: mainPVE(2))
         draw_button(fenetre, "Intermédiaire", (LARGEUR - button_width) // 2, start_y + button_height + button_spacing, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Intermédiaire sélectionné"))
         draw_button(fenetre, "Difficile", (LARGEUR - button_width) // 2, start_y + (button_height + button_spacing) * 2, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Difficile sélectionné"))
 
