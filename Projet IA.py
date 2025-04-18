@@ -339,6 +339,7 @@ def draw_button(surface, text, x, y, width, height, color, hover_color, action=N
         pygame.draw.rect(surface, color, (x, y, width, height))
 
     draw_text(text, font_button, TEXT_COLOR, surface, x + width // 2, y + height // 2)
+
 def show_winner(winner):
     button_width = 300
     button_height = 60
@@ -346,13 +347,14 @@ def show_winner(winner):
         fenetre.fill(FOND)
         draw_text(f"Joueur {winner} gagne !", font_title, BUTTON_COLOR, fenetre, LARGEUR//2, HAUTEUR//2 - 50)
         draw_button(fenetre, "Menu Principal", (LARGEUR - button_width)//2, HAUTEUR//2 + 50, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, main_menu)
-        
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-        
+
         pygame.display.flip()
+
 def main_menu():
     button_width = 450  # Réduction de la largeur des boutons
     button_height = 80  # Réduction de la hauteur des boutons
@@ -373,19 +375,19 @@ def main_menu():
                 sys.exit()
 
         pygame.display.flip()
-        
+
 def evaluer_position(grille, murs):
     """Évalue la position actuelle du jeu pour le joueur IA (joueur 2)"""
     pos_j1 = find_player_position(grille, 1)
     pos_j2 = find_player_position(grille, 2)
-    
+
     if pos_j1 is None or pos_j2 is None:
         return 0
-    
+
     # Distance jusqu'à l'objectif (ligne 0 pour joueur 2, ligne 8 pour joueur 1)
     distance_j1 = pos_j1[0]  # Distance de joueur 1 à sa ligne d'arrivée (ligne 8)
     distance_j2 = 8 - pos_j2[0]  # Distance de joueur 2 à sa ligne d'arrivée (ligne 0)
-    
+
     # Plus la distance du joueur 1 est grande, mieux c'est pour l'IA (joueur 2)
     # Plus la distance du joueur 2 est petite, mieux c'est pour l'IA (joueur 2)
     return distance_j1 - 2 * distance_j2
@@ -399,19 +401,19 @@ def minimax(grille, murs, profondeur, alpha, beta, est_maximisant, tour_joueur):
     # Vérifier si la partie est terminée ou si on a atteint la profondeur maximale
     if profondeur == 0:
         return evaluer_position(grille, murs)
-    
+
     pos_joueur = find_player_position(grille, tour_joueur)
     if pos_joueur is None:
         return 0
-    
+
     # Vérifier si un joueur a gagné
     if (tour_joueur == 1 and pos_joueur[0] == 8) or (tour_joueur == 2 and pos_joueur[0] == 0):
         return float('inf') if est_maximisant else float('-inf')
-    
+
     # Obtenir tous les coups possibles (déplacements)
     i, j = pos_joueur
     coups_possibles = get_possible_moves(i, j, tour_joueur, grille)
-    
+
     # Si c'est au tour du joueur maximisant (IA/joueur 2)
     if est_maximisant:
         meilleur_score = float('-inf')
@@ -421,20 +423,20 @@ def minimax(grille, murs, profondeur, alpha, beta, est_maximisant, tour_joueur):
             grille_temp = [ligne[:] for ligne in grille]
             grille_temp[i][j] = 0
             grille_temp[ni][nj] = tour_joueur
-            
+
             # Appel récursif
             prochain_tour = 1 if tour_joueur == 2 else 2
             score = minimax(grille_temp, murs, profondeur - 1, alpha, beta, False, prochain_tour)
-            
+
             meilleur_score = max(score, meilleur_score)
             alpha = max(alpha, meilleur_score)
-            
+
             # Élagage
             if beta <= alpha:
                 break
-        
+
         return meilleur_score
-    
+
     # Si c'est au tour du joueur minimisant (joueur humain)
     else:
         meilleur_score = float('inf')
@@ -444,71 +446,107 @@ def minimax(grille, murs, profondeur, alpha, beta, est_maximisant, tour_joueur):
             grille_temp = [ligne[:] for ligne in grille]
             grille_temp[i][j] = 0
             grille_temp[ni][nj] = tour_joueur
-            
+
             # Appel récursif
             prochain_tour = 1 if tour_joueur == 2 else 2
             score = minimax(grille_temp, murs, profondeur - 1, alpha, beta, True, prochain_tour)
-            
+
             meilleur_score = min(score, meilleur_score)
             beta = min(beta, meilleur_score)
-            
+
             # Élagage
             if beta <= alpha:
                 break
-        
+
         return meilleur_score
 
-
-def meilleur_coup_ia(grille, murs, profondeur):
+def meilleur_coup_ia(grille, murs, profondeur, murs_restants_ia=10):
     """
     Détermine le meilleur coup pour l'IA (joueur 2)
+    Peut être un déplacement ou la pose d'un mur
     """
     pos_ia = find_player_position(grille, 2)
     if pos_ia is None:
-        return None
-    
+        return None, None
+
     i, j = pos_ia
     coups_possibles = get_possible_moves(i, j, 2, grille)
-    
-    if not coups_possibles:
-        return None
-    
     meilleur_score = float('-inf')
-    meilleur_coup = coups_possibles[0]
-    
+    meilleur_coup = None
+    meilleur_type = None
+
+    # Évaluer les déplacements possibles
     for coup in coups_possibles:
         ni, nj = coup
-        # Simuler le coup
         grille_temp = [ligne[:] for ligne in grille]
         grille_temp[i][j] = 0
         grille_temp[ni][nj] = 2
-        
-        # Évaluer le coup avec minimax
+
         score = minimax(grille_temp, murs, profondeur - 1, float('-inf'), float('inf'), False, 1)
-        
+
         if score > meilleur_score:
             meilleur_score = score
             meilleur_coup = coup
-    
-    return meilleur_coup
+            meilleur_type = "deplacement"
 
+    # Évaluer la pose de murs si l'IA a encore des murs
+    if murs_restants_ia > 0:
+        for x in range(GRID_SIZE - 1):
+            for y in range(GRID_SIZE - 1):
+                # Essayer un mur horizontal
+                mur_h = {'x': x, 'y': y, 'orientation': 'H'}
+                if mur_est_valide(mur_h) and mur_h not in murs:
+                    temp_murs = murs.copy()
+                    temp_murs.append(mur_h)
+                    
+                    # Vérifier si le mur ne bloque pas complètement un joueur
+                    player1_pos = find_player_position(grille, 1)
+                    player2_pos = find_player_position(grille, 2)
+                    if (has_path(player1_pos, 8, temp_murs) and 
+                        has_path(player2_pos, 0, temp_murs)):
+                        
+                        score = minimax(grille, temp_murs, profondeur - 1, float('-inf'), float('inf'), False, 1)
+                        if score > meilleur_score:
+                            meilleur_score = score
+                            meilleur_coup = mur_h
+                            meilleur_type = "mur"
+                
+                # Essayer un mur vertical
+                mur_v = {'x': x, 'y': y, 'orientation': 'V'}
+                if mur_est_valide(mur_v) and mur_v not in murs:
+                    temp_murs = murs.copy()
+                    temp_murs.append(mur_v)
+                    
+                    # Vérifier si le mur ne bloque pas complètement un joueur
+                    player1_pos = find_player_position(grille, 1)
+                    player2_pos = find_player_position(grille, 2)
+                    if (has_path(player1_pos, 8, temp_murs) and 
+                        has_path(player2_pos, 0, temp_murs)):
+                        
+                        score = minimax(grille, temp_murs, profondeur - 1, float('-inf'), float('inf'), False, 1)
+                        if score > meilleur_score:
+                            meilleur_score = score
+                            meilleur_coup = mur_v
+                            meilleur_type = "mur"
+
+    return meilleur_coup, meilleur_type
 
 def mainPVE(difficulte=2):
     grille = creer_grille()
     tour_joueur = 1
     joueur_selectionne = None
     possible_moves = []
-    
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-                
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if tour_joueur == 1:
                     i, j = convertir_pos_souris_en_cell(event.pos)
-                    
+
                     if joueur_selectionne is not None:
                         if i is None or j is None:
                             joueur_selectionne = None
@@ -522,12 +560,12 @@ def mainPVE(difficulte=2):
                                 if grille[i][j] == 0:
                                     grille[current_i][current_j] = 0
                                     grille[i][j] = tour_joueur
-                                    
+
                                     # Vérification victoire joueur
                                     if i == 8:
                                         show_winner(1)
                                         return
-                                    
+
                                     joueur_selectionne = None
                                     possible_moves = []
                                     tour_joueur = 2
@@ -539,10 +577,10 @@ def mainPVE(difficulte=2):
                         elif i is not None and j is not None and grille[i][j] == tour_joueur:
                             joueur_selectionne = (i, j)
                             possible_moves = get_possible_moves(i, j, tour_joueur, grille)
-                            
+
         if tour_joueur == 2:
             coup = meilleur_coup_ia(grille, murs, difficulte)
-            
+
             if coup:
                 ni, nj = coup
                 pos_ia = find_player_position(grille, 2)
@@ -550,14 +588,14 @@ def mainPVE(difficulte=2):
                     i, j = pos_ia
                     grille[i][j] = 0
                     grille[ni][nj] = 2
-                    
+
                     # Vérification victoire IA
                     if ni == 0:
                         show_winner(2)
                         return
-            
+
             tour_joueur = 1
-            
+
         dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
         dessiner_murs(fenetre)
         pygame.display.flip()
@@ -612,12 +650,12 @@ def mainPVP():
                             if grille[i][j] == 0:
                                 grille[current_i][current_j] = 0
                                 grille[i][j] = tour_joueur
-                                
+
                                 # Vérification victoire
                                 if (tour_joueur == 1 and i == 8) or (tour_joueur == 2 and i == 0):
                                     show_winner(tour_joueur)
                                     return
-                                
+
                                 joueur_selectionne = None
                                 possible_moves = []
                                 tour_joueur = 2 if tour_joueur == 1 else 1
@@ -635,6 +673,6 @@ def mainPVP():
         dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
         dessiner_murs(fenetre)
         pygame.display.flip()
-        
+
 if __name__ == "__main__":
     main_menu()
