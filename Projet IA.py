@@ -17,7 +17,7 @@ fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
 pygame.display.set_caption("Quoridor")
 
 # Constantes de couleurs
-FOND = (64, 36, 18)
+FOND = (10, 20, 40)  # Bleu nuit dégradé
 CASE = (250, 233, 192)
 BLANC = (255, 255, 255)
 NOIR = (0, 0, 0)
@@ -27,12 +27,13 @@ MUR = (35, 82, 250)
 MUR_PREVIEW = (78, 126, 255)
 HIGHLIGHT = (173, 216, 230, 100)
 CASE_SOMBRE = (200, 183, 142)
-BUTTON_COLOR = (50, 50, 50)
-BUTTON_HOVER_COLOR = (70, 70, 70)
-TEXT_COLOR = (255, 255, 255)
+BUTTON_COLOR = (255, 215, 0)  # Jaune
+BUTTON_HOVER_COLOR = (255, 235, 100)  # Jaune plus clair pour le survol
+TEXT_COLOR = (10, 20, 40)  # Bleu nuit
 
-# Police
-font = pygame.font.SysFont(None, 70)
+# Charger la police personnalisée
+font_title = pygame.font.Font('NovaSquare-Regular.ttf', 150)  # Police ajustée à 75% de 200
+font_button = pygame.font.Font('NovaSquare-Regular.ttf', 35)  # Police plus petite pour le texte des boutons
 
 murs = [
     # {'x': 2, 'y': 3, 'orientation': 'H'},  #Exemple Mur horizontal entre les cases
@@ -337,19 +338,19 @@ def draw_button(surface, text, x, y, width, height, color, hover_color, action=N
     else:
         pygame.draw.rect(surface, color, (x, y, width, height))
 
-    draw_text(text, font, TEXT_COLOR, surface, x + width // 2, y + height // 2)
+    draw_text(text, font_button, TEXT_COLOR, surface, x + width // 2, y + height // 2)
 
 def main_menu():
-    button_width = 400
-    button_height = 80
-    button_spacing = 50
-    total_height = button_height * 2 + button_spacing
+    button_width = 450  # Réduction de la largeur des boutons
+    button_height = 80  # Réduction de la hauteur des boutons
+    button_spacing = 40  # Réduction de l'espacement entre les boutons
+    total_height = button_height * 2 + button_spacing + 150  # Ajout de 150 pour le texte "QUORRIDOR"
 
     while True:
         fenetre.fill(FOND)
-        draw_text("Quorridor - Menu Principal", font, TEXT_COLOR, fenetre, LARGEUR // 2, 150)
+        draw_text("QUORRIDOR", font_title, BUTTON_COLOR, fenetre, LARGEUR // 2, 250)  # Position ajustée
 
-        start_y = (HAUTEUR - total_height) // 2
+        start_y = (HAUTEUR - total_height) // 2 + 150  # Ajustement pour centrer les boutons
         draw_button(fenetre, "Jouer Vs Joueur", (LARGEUR - button_width) // 2, start_y, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, mainPVP)
         draw_button(fenetre, "Joueur Vs IA", (LARGEUR - button_width) // 2, start_y + button_height + button_spacing, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, difficulty_menu)
 
@@ -361,16 +362,16 @@ def main_menu():
         pygame.display.flip()
 
 def difficulty_menu():
-    button_width = 400
-    button_height = 80
-    button_spacing = 50
-    total_height = button_height * 3 + button_spacing * 2
+    button_width = 450  # Réduction de la largeur des boutons
+    button_height = 80  # Réduction de la hauteur des boutons
+    button_spacing = 40  # Réduction de l'espacement entre les boutons
+    total_height = button_height * 3 + button_spacing * 2 + 100  # Ajout de 100 pour le texte "Difficulté :"
 
     while True:
         fenetre.fill(FOND)
-        draw_text("Choisissez la difficulté", font, TEXT_COLOR, fenetre, LARGEUR // 2, 150)
+        draw_text("Difficulté :", font_title, BUTTON_COLOR, fenetre, LARGEUR // 2, 100)
 
-        start_y = (HAUTEUR - total_height) // 2
+        start_y = (HAUTEUR - total_height) // 2 + 100  # Ajustement pour centrer les boutons
         draw_button(fenetre, "Facile", (LARGEUR - button_width) // 2, start_y, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Facile sélectionné"))
         draw_button(fenetre, "Intermédiaire", (LARGEUR - button_width) // 2, start_y + button_height + button_spacing, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Intermédiaire sélectionné"))
         draw_button(fenetre, "Difficile", (LARGEUR - button_width) // 2, start_y + (button_height + button_spacing) * 2, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Difficile sélectionné"))
