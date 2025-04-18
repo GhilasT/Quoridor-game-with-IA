@@ -445,6 +445,40 @@ def minimax(grille, murs, profondeur, alpha, beta, est_maximisant, tour_joueur):
         
         return meilleur_score
 
+
+def meilleur_coup_ia(grille, murs, profondeur):
+    """
+    Détermine le meilleur coup pour l'IA (joueur 2)
+    """
+    pos_ia = find_player_position(grille, 2)
+    if pos_ia is None:
+        return None
+    
+    i, j = pos_ia
+    coups_possibles = get_possible_moves(i, j, 2, grille)
+    
+    if not coups_possibles:
+        return None
+    
+    meilleur_score = float('-inf')
+    meilleur_coup = coups_possibles[0]
+    
+    for coup in coups_possibles:
+        ni, nj = coup
+        # Simuler le coup
+        grille_temp = [ligne[:] for ligne in grille]
+        grille_temp[i][j] = 0
+        grille_temp[ni][nj] = 2
+        
+        # Évaluer le coup avec minimax
+        score = minimax(grille_temp, murs, profondeur - 1, float('-inf'), float('inf'), False, 1)
+        
+        if score > meilleur_score:
+            meilleur_score = score
+            meilleur_coup = coup
+    
+    return meilleur_coup
+
 def difficulty_menu():
     button_width = 450
     button_height = 80
