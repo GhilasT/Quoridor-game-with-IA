@@ -360,7 +360,27 @@ def main_menu():
 
         pygame.display.flip()
 
+def difficulty_menu():
+    button_width = 400
+    button_height = 80
+    button_spacing = 50
+    total_height = button_height * 3 + button_spacing * 2
 
+    while True:
+        fenetre.fill(FOND)
+        draw_text("Choisissez la difficulté", font, TEXT_COLOR, fenetre, LARGEUR // 2, 150)
+
+        start_y = (HAUTEUR - total_height) // 2
+        draw_button(fenetre, "Facile", (LARGEUR - button_width) // 2, start_y, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Facile sélectionné"))
+        draw_button(fenetre, "Intermédiaire", (LARGEUR - button_width) // 2, start_y + button_height + button_spacing, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Intermédiaire sélectionné"))
+        draw_button(fenetre, "Difficile", (LARGEUR - button_width) // 2, start_y + (button_height + button_spacing) * 2, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, lambda: print("Difficile sélectionné"))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        pygame.display.flip()
 
 def mainPVP():
     grille = creer_grille()
