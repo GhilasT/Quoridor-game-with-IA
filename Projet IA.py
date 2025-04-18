@@ -377,6 +377,73 @@ def evaluer_position(grille, murs):
     # Plus la distance du joueur 2 est petite, mieux c'est pour l'IA (joueur 2)
     return distance_j1 - 2 * distance_j2
 
+def minimax(grille, murs, profondeur, alpha, beta, est_maximisant, tour_joueur):
+    """
+    Implémentation de l'algorithme minimax avec élagage alpha-beta
+    - est_maximisant: True si c'est au tour du joueur maximisant (IA/joueur 2)
+    - tour_joueur: 1 pour joueur humain, 2 pour IA
+    """
+    # Vérifier si la partie est terminée ou si on a atteint la profondeur maximale
+    if profondeur == 0:
+        return evaluer_position(grille, murs)
+    
+    pos_joueur = find_player_position(grille, tour_joueur)
+    if pos_joueur is None:
+        return 0
+    
+    # Vérifier si un joueur a gagné
+    if (tour_joueur == 1 and pos_joueur[0] == 8) or (tour_joueur == 2 and pos_joueur[0] == 0):
+        return float('inf') if est_maximisant else float('-inf')
+    
+    # Obtenir tous les coups possibles (déplacements)
+    i, j = pos_joueur
+    coups_possibles = get_possible_moves(i, j, tour_joueur, grille)
+    
+    # Si c'est au tour du joueur maximisant (IA/joueur 2)
+    if est_maximisant:
+        meilleur_score = float('-inf')
+        for coup in coups_possibles:
+            ni, nj = coup
+            # Simuler le coup
+            grille_temp = [ligne[:] for ligne in grille]
+            grille_temp[i][j] = 0
+            grille_temp[ni][nj] = tour_joueur
+            
+            # Appel récursif
+            prochain_tour = 1 if tour_joueur == 2 else 2
+            score = minimax(grille_temp, murs, profondeur - 1, alpha, beta, False, prochain_tour)
+            
+            meilleur_score = max(score, meilleur_score)
+            alpha = max(alpha, meilleur_score)
+            
+            # Élagage
+            if beta <= alpha:
+                break
+        
+        return meilleur_score
+    
+    # Si c'est au tour du joueur minimisant (joueur humain)
+    else:
+        meilleur_score = float('inf')
+        for coup in coups_possibles:
+            ni, nj = coup
+            # Simuler le coup
+            grille_temp = [ligne[:] for ligne in grille]
+            grille_temp[i][j] = 0
+            grille_temp[ni][nj] = tour_joueur
+            
+            # Appel récursif
+            prochain_tour = 1 if tour_joueur == 2 else 2
+            score = minimax(grille_temp, murs, profondeur - 1, alpha, beta, True, prochain_tour)
+            
+            meilleur_score = min(score, meilleur_score)
+            beta = min(beta, meilleur_score)
+            
+            # Élagage
+            if beta <= alpha:
+                break
+        
+        return meilleur_score
 
 def difficulty_menu():
     button_width = 450
