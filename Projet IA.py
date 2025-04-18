@@ -479,6 +479,72 @@ def meilleur_coup_ia(grille, murs, profondeur):
     
     return meilleur_coup
 
+
+def mainPVE(difficulte=2):  # Par défaut, profondeur 2 pour facile
+    """Mode Joueur contre IA"""
+    grille = creer_grille()
+    tour_joueur = 1  # Le joueur humain commence
+    joueur_selectionne = None
+    possible_moves = []
+    
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+                
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if tour_joueur == 1:  # Tour du joueur humain
+                    i, j = convertir_pos_souris_en_cell(event.pos)
+                    
+                    if joueur_selectionne is not None:
+                        if i is None or j is None:
+                            joueur_selectionne = None
+                            possible_moves = []
+                        elif i == joueur_selectionne[0] and j == joueur_selectionne[1]:
+                            joueur_selectionne = None
+                            possible_moves = []
+                        else:
+                            current_i, current_j = joueur_selectionne
+                            if mouvement_est_valide(current_i, current_j, i, j, tour_joueur, grille):
+                                if grille[i][j] == 0:
+                                    grille[current_i][current_j] = 0
+                                    grille[i][j] = tour_joueur
+                                    joueur_selectionne = None
+                                    possible_moves = []
+                                    tour_joueur = 2  # Passer au tour de l'IA
+                    
+                    else:
+                        if gestion_clic_souris(event.pos, grille):
+                            possible_moves = []
+                            tour_joueur = 2  # Passer au tour de l'IA
+                        elif i is not None and j is not None and grille[i][j] == tour_joueur:
+                            joueur_selectionne = (i, j)
+                            possible_moves = get_possible_moves(i, j, tour_joueur, grille)
+                            
+            elif event.type == pygame.MOUSEMOTION:
+                gestion_hover_souris(event.pos)
+                
+        # Tour de l'IA
+        if tour_joueur == 2:
+            # Faire jouer l'IA
+            coup = meilleur_coup_ia(grille, murs, difficulte)
+            
+            if coup:
+                ni, nj = coup
+                pos_ia = find_player_position(grille, 2)
+                if pos_ia:
+                    i, j = pos_ia
+                    grille[i][j] = 0
+                    grille[ni][nj] = 2
+            
+            tour_joueur = 1  # Retour au tour du joueur humain
+            
+        dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
+        dessiner_murs(fenetre)
+        pygame.display.flip()
+
+
 def difficulty_menu():
     button_width = 450
     button_height = 80
