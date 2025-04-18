@@ -339,7 +339,20 @@ def draw_button(surface, text, x, y, width, height, color, hover_color, action=N
         pygame.draw.rect(surface, color, (x, y, width, height))
 
     draw_text(text, font_button, TEXT_COLOR, surface, x + width // 2, y + height // 2)
-
+def show_winner(winner):
+    button_width = 300
+    button_height = 60
+    while True:
+        fenetre.fill(FOND)
+        draw_text(f"Joueur {winner} gagne !", font_title, BUTTON_COLOR, fenetre, LARGEUR//2, HAUTEUR//2 - 50)
+        draw_button(fenetre, "Menu Principal", (LARGEUR - button_width)//2, HAUTEUR//2 + 50, button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR, main_menu)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        
+        pygame.display.flip()
 def main_menu():
     button_width = 450  # Réduction de la largeur des boutons
     button_height = 80  # Réduction de la hauteur des boutons
