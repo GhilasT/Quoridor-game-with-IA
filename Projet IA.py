@@ -162,11 +162,165 @@ def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_pr
     
     return position_score + progres_joueur + centre_score + murs_score
 
+def evaluer_position_intermediaire(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal=2):
+    """
+    Fonction d'évaluation pour le niveau intermédiaire, plus orientée sur le blocage.
+    
+    Args:
+        Identiques à evaluer_position
+    """
+    joueur_num = joueur_principal
+    adversaire_num = 3 - joueur_principal
+    
+    pos_joueur = find_player_position(grille, joueur_num)
+    pos_adversaire = find_player_position(grille, adversaire_num)
+    
+    if pos_joueur is None or pos_adversaire is None:
+        return 0
+        
+    ligne_obj_joueur = 8 if joueur_num == 1 else 0
+    ligne_obj_adversaire = 0 if joueur_num == 1 else 8
+
+    # Détection de fin de partie
+    if pos_joueur[0] == ligne_obj_joueur:
+        return 10000
+    if pos_adversaire[0] == ligne_obj_adversaire:
+        return -10000
+        
+    # Calcul des chemins
+    dist_joueur, chemin_joueur = a_star_search(pos_joueur, ligne_obj_joueur, murs)
+    dist_adversaire, chemin_adversaire = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
+    
+    # Plus orienté sur le blocage de l'adversaire que l'avancée personnelle
+    poids_distance_adversaire = 7.0  # Plus élevé que dans la version standard
+    poids_distance_joueur = 3.0      # Moins élevé que dans la version standard
+    poids_avance = 2.0
+    poids_murs_restants = 1.2        # Plus d'importance aux murs
+    
+    # Score basé sur la différence de distance, mais favorisant le blocage
+    position_score = poids_distance_adversaire * dist_adversaire - poids_distance_joueur * dist_joueur
+    
+    # Progression du joueur
+    if joueur_num == 1:
+        progres_joueur = pos_joueur[0] * poids_avance
+    else:
+        progres_joueur = (8 - pos_joueur[0]) * poids_avance
+        
+    # Favoriser la conservation des murs pour la fin de partie
+    murs_restants_joueur = murs_restants_j1 if joueur_num == 1 else murs_restants_j2
+    murs_restants_adversaire = murs_restants_j2 if joueur_num == 1 else murs_restants_j1
+    
+    murs_score = (murs_restants_joueur - murs_restants_adversaire * 0.8) * poids_murs_restants
+    
+    # Bonus pour être en position de bloquer l'adversaire
+    dist_a_adversaire = abs(pos_joueur[0] - pos_adversaire[0]) + abs(pos_joueur[1] - pos_adversaire[1])
+    bonus_blocage = 0
+    if dist_a_adversaire <= 2:
+        if 1 <= pos_adversaire[0] <= 7:  # Si l'adversaire n'est pas aux extrémités
+            bonus_blocage = 3.0
+    
+    # Bonus pour les positions qui contrôlent le centre du plateau
+    centre_score = 0
+    if 3 <= pos_joueur[1] <= 5:
+        if (joueur_num == 1 and pos_joueur[0] >= 4) or (joueur_num == 2 and pos_joueur[0] <= 4):
+            centre_score = 2.5  # Forte valeur pour contrôler le centre dans la moitié adverse
+        else:
+            centre_score = 1.0
+    
+    # Pénalité pour trop s'éloigner du centre horizontalement
+    ecart_centre = abs(pos_joueur[1] - 4)
+    penalite_ecart = -ecart_centre * 0.5
+    
+    return position_score + progres_joueur + murs_score + bonus_blocage + centre_score + penalite_ecart
+
+def evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal=2):
+    """
+    Fonction d'évaluation pour le niveau difficile, plus sophistiquée et équilibrée.
+    
+    Args:
+        Identiques à evaluer_position
+    """
+    joueur_num = joueur_principal
+    adversaire_num = 3 - joueur_principal
+    
+    pos_joueur = find_player_position(grille, joueur_num)
+    pos_adversaire = find_player_position(grille, adversaire_num)
+    
+    if pos_joueur is None or pos_adversaire is None:
+        return 0
+        
+    ligne_obj_joueur = 8 if joueur_num == 1 else 0
+    ligne_obj_adversaire = 0 if joueur_num == 1 else 8
+
+    # Détection de fin de partie
+    if pos_joueur[0] == ligne_obj_joueur:
+        return 10000
+    if pos_adversaire[0] == ligne_obj_adversaire:
+        return -10000
+        
+    # Calcul des chemins plus détaillé
+    dist_joueur, chemin_joueur = a_star_search(pos_joueur, ligne_obj_joueur, murs)
+    dist_adversaire, chemin_adversaire = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
+    
+    # Équilibre bien dosé entre progression et blocage
+    poids_distance = 5.5
+    poids_avance = 3.5
+    poids_position_centrale = 1.0
+    poids_murs_strategie = 2.0
+    
+    # Score basé sur la différence de distance 
+    position_score = (dist_adversaire - dist_joueur) * poids_distance
+    
+    # Progression et avancement sur le plateau
+    if joueur_num == 1:
+        progres_joueur = pos_joueur[0] * poids_avance
+    else:
+        progres_joueur = (8 - pos_joueur[0]) * poids_avance
+    
+    # Contrôle du centre avec plus de nuances
+    centre_score = 0
+    if 2 <= pos_joueur[1] <= 6:  # Zone plus large que la version de base
+        centre_bonus = 6 - abs(pos_joueur[1] - 4) * 2  # Bonus dégressif depuis la colonne centrale
+        centre_score = centre_bonus * poids_position_centrale
+    
+    # Bonus pour les positions de jeu stratégiques
+    position_strategique = 0
+    if (joueur_num == 1 and pos_joueur[0] >= 5) or (joueur_num == 2 and pos_joueur[0] <= 3):
+        # Position avancée dans le territoire adverse
+        position_strategique += 2.0
+    
+    # La différence de chemins alternatifs (mesure la flexibilité de mouvement)
+    chemins_joueur = count_chemins_alternatifs(pos_joueur, ligne_obj_joueur, murs, max_depth=6)
+    chemins_adversaire = count_chemins_alternatifs(pos_adversaire, ligne_obj_adversaire, murs, max_depth=6)
+    score_flexibilite = (chemins_joueur - chemins_adversaire) * 0.5
+    
+    # Utilisation stratégique des murs (variable selon la phase de jeu)
+    murs_restants_joueur = murs_restants_j1 if joueur_num == 1 else murs_restants_j2
+    murs_restants_adversaire = murs_restants_j2 if joueur_num == 1 else murs_restants_j1
+    
+    # En début de partie, conserver ses murs
+    if len(murs) < 8:
+        murs_score = murs_restants_joueur * 0.4
+    # En milieu de partie, les utiliser stratégiquement
+    elif len(murs) < 16:
+        ratio_joueur_adverse = murs_restants_joueur / (murs_restants_adversaire + 0.1)
+        murs_score = ratio_joueur_adverse * poids_murs_strategie
+    # En fin de partie, pousser pour la victoire ou bloquer l'adversaire
+    else:
+        if dist_joueur < dist_adversaire:
+            # Si on est en avance, garder des murs pour bloquer le rattrapage
+            murs_score = murs_restants_joueur * 0.8
+        else:
+            # Si on est en retard, valeur moindre des murs
+            murs_score = murs_restants_joueur * 0.3
+    
+    return position_score + progres_joueur + centre_score + position_strategique + score_flexibilite + murs_score
+
 def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha, beta, 
-           est_maximisant, tour_joueur, joueur_principal=2):
+           est_maximisant, tour_joueur, joueur_principal=2, difficulte=5):
     """
     Implémentation unifiée de minimax avec élagage alpha-beta.
-    Par défaut, joue du point de vue du joueur 2 (IA) pour compatibilité.
+    Utilise différentes fonctions d'évaluation selon la difficulté.
     
     Args:
         grille: Grille de jeu actuelle
@@ -177,13 +331,19 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
         est_maximisant: Si c'est le tour du joueur maximisant
         tour_joueur: Le joueur qui joue actuellement (1 ou 2)
         joueur_principal: Le joueur pour lequel on optimise (1 ou 2)
+        difficulte: Le niveau de difficulté qui détermine la fonction d'évaluation
         
     Returns:
         float: Score de la meilleure position trouvée
     """
     # Vérifier fin de partie ou profondeur max atteinte
     if profondeur == 0:
-        return evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
+        if difficulte == 1:
+            return evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
+        elif difficulte == 3:
+            return evaluer_position_intermediaire(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
+        else:  # difficulté 5
+            return evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
 
     pos_joueur = find_player_position(grille, tour_joueur)
     if pos_joueur is None:
@@ -215,7 +375,7 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
             score = minimax(grille_temp, murs,
                           murs_restants_j1 if tour_joueur == 2 else murs_restants_j1,
                           murs_restants_j2 if tour_joueur == 1 else murs_restants_j2,
-                          profondeur - 1, alpha, beta, False, prochain_tour, joueur_principal)
+                          profondeur - 1, alpha, beta, False, prochain_tour, joueur_principal, difficulte)
 
             meilleur_score = max(score, meilleur_score)
             alpha = max(alpha, meilleur_score)
@@ -241,7 +401,7 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
             score = minimax(grille_temp, murs,
                           murs_restants_j1 if tour_joueur == 2 else murs_restants_j1,
                           murs_restants_j2 if tour_joueur == 1 else murs_restants_j2,
-                          profondeur - 1, alpha, beta, True, prochain_tour, joueur_principal)
+                          profondeur - 1, alpha, beta, True, prochain_tour, joueur_principal, difficulte)
 
             meilleur_score = min(score, meilleur_score)
             beta = min(beta, meilleur_score)
@@ -253,7 +413,7 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
         return meilleur_score
 
 def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur, 
-                                    murs_restants_joueur, murs_restants_adversaire):
+                                    murs_restants_joueur, murs_restants_adversaire, difficulte):
     """Détermine le meilleur déplacement pour un joueur"""
     i, j = pos_joueur
     coups_possibles = get_possible_moves(i, j, joueur_num, grille)
@@ -266,12 +426,12 @@ def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profo
     
     for coup in coups_possibles:
         ni, nj = coup
-        # Score de base
+        # Score de base selon la difficulté
         score_base = 0
         
         # Bonus pour direction favorable
         if (joueur_num == 1 and ni > i) or (joueur_num == 2 and ni < i):
-            score_base += 2
+            score_base += 2 if difficulte == 5 else 3  # Plus agressif pour l'IA intermédiaire
             
         # Bonus pour position centrale
         if 3 <= nj <= 5:
@@ -282,7 +442,7 @@ def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profo
         grille_temp[i][j] = 0
         grille_temp[ni][nj] = joueur_num
         
-        # Évaluation minimax
+        # Évaluation minimax avec la difficulté appropriée
         score_minimax = minimax(grille_temp, murs, 
                               murs_restants_j1=murs_restants_adversaire if joueur_num == 2 else murs_restants_joueur,
                               murs_restants_j2=murs_restants_adversaire if joueur_num == 1 else murs_restants_joueur,
@@ -290,7 +450,8 @@ def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profo
                               alpha=float('-inf'), beta=float('inf'), 
                               est_maximisant=False, 
                               tour_joueur=3 - joueur_num,
-                              joueur_principal=joueur_num)
+                              joueur_principal=joueur_num,
+                              difficulte=difficulte)
         
         # Score final
         score_final = score_base + score_minimax
@@ -301,11 +462,112 @@ def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profo
             
     return meilleur_coup, "deplacement"
 
+def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, difficulte=5):
+    """Identifie les murs potentiels qui ralentissent efficacement l'adversaire"""
+    # Trouver le chemin optimal actuel
+    dist_actuelle, chemin = a_star_search(pos_joueur, target_row, walls)
+
+    murs_candidats = []
+    murs_evalues = []
+    
+    # Stratégies différentes selon la difficulté
+    chemins_a_analyser = 1  # Base 
+    if difficulte == 3:
+        # L'IA intermédiaire analysera plus de segments pour trouver des opportunités de blocage
+        chemins_a_analyser = min(len(chemin) - 1, 4)  # Analyser jusqu'à 4 segments du chemin
+    elif difficulte == 5:
+        # L'IA difficile est plus sélective et efficace
+        chemins_a_analyser = min(len(chemin) - 1, 3)  # Analyser jusqu'à 3 segments du chemin
+
+    # Analyser chaque segment du chemin pour les murs potentiels
+    for i in range(min(chemins_a_analyser, len(chemin) - 1)):
+        curr_i, curr_j = chemin[i]
+        next_i, next_j = chemin[i + 1]
+
+        # Différence de position
+        di = next_i - curr_i
+        dj = next_j - curr_j
+
+        # Générer des murs possibles
+        murs_possibles = []
+
+        # Si mouvement horizontal
+        if di == 0:
+            x = min(curr_j, next_j)
+            # Mur vertical pour bloquer ce mouvement
+            murs_possibles.append({'x': x, 'y': curr_i - 1, 'orientation': 'V'})
+            murs_possibles.append({'x': x, 'y': curr_i, 'orientation': 'V'})
+            
+            # Pour le niveau intermédiaire, ajouter des murs adjacents pour créer des labyrinthes
+            if difficulte == 3 and curr_i > 0 and curr_i < GRID_SIZE-1:
+                murs_possibles.append({'x': x - 1 if x > 0 else x, 'y': curr_i, 'orientation': 'H'})
+                murs_possibles.append({'x': x, 'y': curr_i, 'orientation': 'H'})
+
+        # Si mouvement vertical
+        elif dj == 0:
+            y = min(curr_i, next_i)
+            # Mur horizontal pour bloquer ce mouvement
+            murs_possibles.append({'x': curr_j - 1, 'y': y, 'orientation': 'H'})
+            murs_possibles.append({'x': curr_j, 'y': y, 'orientation': 'H'})
+            
+            # Pour le niveau intermédiaire, ajouter des murs adjacents pour créer des labyrinthes
+            if difficulte == 3 and curr_j > 0 and curr_j < GRID_SIZE-1:
+                murs_possibles.append({'x': curr_j, 'y': y - 1 if y > 0 else y, 'orientation': 'V'})
+                murs_possibles.append({'x': curr_j, 'y': y, 'orientation': 'V'})
+
+        # Évaluer chaque mur possible
+        for mur in murs_possibles:
+            if (0 <= mur['x'] <= GRID_SIZE-2 and
+                0 <= mur['y'] <= GRID_SIZE-2 and
+                mur not in murs_evalues):
+
+                murs_evalues.append(mur)
+
+                if mur_est_valide(mur) and mur not in walls:
+                    temp_walls = walls.copy()
+                    temp_walls.append(mur)
+
+                    # Vérifier que les deux joueurs ont toujours un chemin
+                    pos_j1 = find_player_position(grille, 1)
+                    pos_j2 = find_player_position(grille, 2)
+
+                    if (has_path(pos_j1, 8, temp_walls) and
+                        has_path(pos_j2, 0, temp_walls)):
+
+                        # Calculer la nouvelle distance
+                        nouvelle_dist, _ = a_star_search(pos_joueur, target_row, temp_walls)
+
+                        # Gain = augmentation de distance
+                        gain = nouvelle_dist - dist_actuelle
+                        
+                        # Pour l'IA intermédiaire, considérer aussi les murs qui créent des détours plus longs
+                        if difficulte == 3 and gain > 0:
+                            # Bonus pour les murs qui forcent l'adversaire à faire un grand détour
+                            chemins_avant = count_chemins_alternatifs(pos_joueur, target_row, walls, max_depth=4)
+                            chemins_apres = count_chemins_alternatifs(pos_joueur, target_row, temp_walls, max_depth=4)
+                            
+                            # Si le mur réduit significativement les options de l'adversaire
+                            if chemins_avant > chemins_apres:
+                                gain += (chemins_avant - chemins_apres) * 0.5
+
+                        if gain > 0:
+                            murs_candidats.append((mur, gain))
+
+    # Trier les murs par gain décroissant
+    murs_candidats.sort(key=lambda x: x[1], reverse=True)
+
+    # Retourner les meilleurs murs (plus nombreux pour l'IA intermédiaire)
+    if difficulte == 3:
+        return [mur for mur, _ in murs_candidats[:7]]  # Plus d'options pour l'IA intermédiaire
+    else:
+        return [mur for mur, _ in murs_candidats[:5]]
+
 def meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, joueur_num, 
-                           murs_restants, murs_restants_adversaire, ligne_obj_adv, profondeur):
+                           murs_restants, murs_restants_adversaire, ligne_obj_adv, 
+                           profondeur, difficulte):
     """Détermine le meilleur mur à placer pour un joueur"""
-    # Trouver des murs candidats
-    murs_candidats = murs_proches_des_chemins_critique(grille, murs, pos_adversaire, ligne_obj_adv)
+    # Trouver des murs candidats avec la difficulté appropriée
+    murs_candidats = murs_proches_des_chemins_critique(grille, murs, pos_adversaire, ligne_obj_adv, difficulte)
     
     if not murs_candidats:
         return None, None
@@ -313,7 +575,9 @@ def meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, joueur_nu
     meilleur_score = float('-inf')
     meilleur_mur = None
     
-    for mur in murs_candidats[:5]:  # Limiter aux 5 meilleurs candidats
+    max_candidats = 7 if difficulte == 3 else 5
+    
+    for mur in murs_candidats[:max_candidats]:
         if mur_est_valide(mur) and mur not in murs:
             temp_murs = murs.copy()
             temp_murs.append(mur)
@@ -321,6 +585,7 @@ def meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, joueur_nu
             # Vérifier que les deux joueurs ont toujours un chemin
             ligne_obj_joueur = 8 if joueur_num == 1 else 0
             if has_path(pos_adversaire, ligne_obj_adv, temp_murs) and has_path(pos_joueur, ligne_obj_joueur, temp_murs):
+                # Évaluation avec la fonction appropriée à la difficulté
                 score = minimax(grille, temp_murs,
                               murs_restants_j1=murs_restants_adversaire if joueur_num == 2 else murs_restants - 1,
                               murs_restants_j2=murs_restants_adversaire if joueur_num == 1 else murs_restants - 1,
@@ -328,7 +593,25 @@ def meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, joueur_nu
                               alpha=float('-inf'), beta=float('inf'),
                               est_maximisant=False, 
                               tour_joueur=3 - joueur_num,
-                              joueur_principal=joueur_num)
+                              joueur_principal=joueur_num,
+                              difficulte=difficulte)
+                
+                # Pour l'IA intermédiaire, favoriser les murs qui créent des déviations complexes
+                if difficulte == 3:
+                    # Vérifier l'impact sur les chemins alternatifs de l'adversaire
+                    chemins_avant = count_chemins_alternatifs(pos_adversaire, ligne_obj_adv, murs, max_depth=4)
+                    chemins_apres = count_chemins_alternatifs(pos_adversaire, ligne_obj_adv, temp_murs, max_depth=4)
+                    
+                    # Bonus pour réduire les options
+                    score += (chemins_avant - chemins_apres) * 2.0
+                    
+                    # Également vérifier l'impact sur la distance
+                    dist_avant, _ = a_star_search(pos_adversaire, ligne_obj_adv, murs)
+                    dist_apres, _ = a_star_search(pos_adversaire, ligne_obj_adv, temp_murs)
+                    
+                    # Bonus pour l'augmentation de la distance
+                    if dist_apres > dist_avant:
+                        score += (dist_apres - dist_avant) * 3.0
                 
                 if score > meilleur_score:
                     meilleur_score = score
@@ -363,7 +646,7 @@ def meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficult
     profondeur_recherche = {
         1: 1,   # Facile
         3: 3,   # Moyen
-        5: 5    # Difficile
+        5: 4    # Difficile (légère augmentation)
     }.get(difficulte, 3)
     
     murs_restants_joueur = murs_restants_j1 if joueur_num == 1 else murs_restants_j2
@@ -392,32 +675,36 @@ def meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficult
         dist_adv, _ = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
         
         # Ajuster la stratégie selon la situation
-        if difficulte == 3:  # Moyen
-            priorite_deplacement = 0.7
-        else:  # Difficile
-            priorite_deplacement = 0.9 if dist_joueur <= dist_adv else 0.5
+        if difficulte == 3:  # Moyen - plus agressif avec les murs
+            # Plus de murs quand en désavantage ou quand l'adversaire est proche de gagner
+            if dist_joueur > dist_adv or dist_adv <= 3:
+                priorite_deplacement = 0.4  # 60% de chances de placer un mur
+            else:
+                priorite_deplacement = 0.65  # 35% de chances de placer un mur
+        else:  # Difficile - stratégie plus équilibrée
+            priorite_deplacement = 0.75 if dist_joueur <= dist_adv else 0.6
             if dist_adv <= 2:  # Si l'adversaire est près de gagner, priorité aux murs
-                priorite_deplacement = 0.2
+                priorite_deplacement = 0.3
         
         # Décision: déplacement ou pose de mur
         if random.random() < priorite_deplacement or murs_restants_joueur == 0:
             # DÉPLACEMENT
             return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
-                                                  murs_restants_joueur, murs_restants_adversaire)
+                                                  murs_restants_joueur, murs_restants_adversaire, difficulte)
         else:
             # MUR
             ligne_obj_adv = 8 if adversaire_num == 1 else 0
             mur_candidat, type_coup = meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, 
                                                             joueur_num, murs_restants_joueur, 
                                                             murs_restants_adversaire, ligne_obj_adv, 
-                                                            profondeur_recherche)
+                                                            profondeur_recherche, difficulte)
             
             if mur_candidat:
                 return mur_candidat, type_coup
             else:
                 # Fallback sur déplacement si pas de bon mur
                 return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
-                                                      murs_restants_joueur, murs_restants_adversaire)
+                                                      murs_restants_joueur, murs_restants_adversaire, difficulte)
 
 def dessiner_murs(surface):
     global mur_preview
@@ -1380,74 +1667,6 @@ def count_chemins_alternatifs(pos, target_row, walls, max_depth=10):
 
     # Retourne le nombre de chemins distincts trouvés
     return len(chemins_distincts)
-
-def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row):
-    """Identifie les murs potentiels qui ralentissent efficacement l'adversaire"""
-    # Trouver le chemin optimal actuel
-    dist_actuelle, chemin = a_star_search(pos_joueur, target_row, walls)
-
-    murs_candidats = []
-    murs_evalues = []
-
-    # Analyser chaque segment du chemin pour les murs potentiels
-    for i in range(len(chemin) - 1):
-        curr_i, curr_j = chemin[i]
-        next_i, next_j = chemin[i + 1]
-
-        # Différence de position
-        di = next_i - curr_i
-        dj = next_j - curr_j
-
-        # Générer des murs possibles
-        murs_possibles = []
-
-        # Si mouvement horizontal
-        if di == 0:
-            x = min(curr_j, next_j)
-            # Mur vertical pour bloquer ce mouvement
-            murs_possibles.append({'x': x, 'y': curr_i - 1, 'orientation': 'V'})
-            murs_possibles.append({'x': x, 'y': curr_i, 'orientation': 'V'})
-
-        # Si mouvement vertical
-        elif dj == 0:
-            y = min(curr_i, next_i)
-            # Mur horizontal pour bloquer ce mouvement
-            murs_possibles.append({'x': curr_j - 1, 'y': y, 'orientation': 'H'})
-            murs_possibles.append({'x': curr_j, 'y': y, 'orientation': 'H'})
-
-        # Évaluer chaque mur possible
-        for mur in murs_possibles:
-            if (0 <= mur['x'] <= GRID_SIZE-2 and
-                0 <= mur['y'] <= GRID_SIZE-2 and
-                mur not in murs_evalues):
-
-                murs_evalues.append(mur)
-
-                if mur_est_valide(mur) and mur not in walls:
-                    temp_walls = walls.copy()
-                    temp_walls.append(mur)
-
-                    # Vérifier que les deux joueurs ont toujours un chemin
-                    pos_j1 = find_player_position(grille, 1)
-                    pos_j2 = find_player_position(grille, 2)
-
-                    if (has_path(pos_j1, 8, temp_walls) and
-                        has_path(pos_j2, 0, temp_walls)):
-
-                        # Calculer la nouvelle distance
-                        nouvelle_dist, _ = a_star_search(pos_joueur, target_row, temp_walls)
-
-                        # Gain = augmentation de distance
-                        gain = nouvelle_dist - dist_actuelle
-
-                        if gain > 0:
-                            murs_candidats.append((mur, gain))
-
-    # Trier les murs par gain décroissant
-    murs_candidats.sort(key=lambda x: x[1], reverse=True)
-
-    # Retourner les meilleurs murs avec leur gain
-    return [mur for mur, _ in murs_candidats[:5]]
 
 def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
     """Simulation complète sans interface graphique"""
