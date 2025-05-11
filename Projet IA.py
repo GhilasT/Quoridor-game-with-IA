@@ -99,9 +99,9 @@ def a_star_search(start_pos, target_row, walls):
 
 def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal=2):
     """
-    Fonction d'évaluation unifiée pour les deux modes de jeu.
-    Par défaut, évalue du point de vue du joueur 2 (IA) pour compatibilité avec l'ancien code.
-    
+    Évalue la position actuelle du jeu (mode facile).
+    Détermine un score basé sur la proximité à la ligne opposée
+    et d'autres critères simples pour guider les prochaines actions.
     Args:
         grille: Grille de jeu actuelle
         murs: Liste des murs placés
