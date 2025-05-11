@@ -21,11 +21,11 @@ current_difficulty = DIFFICULTY_MEDIUM
 # Initialiser Pygame
 pygame.init()
 
-# Définir les dimensions de la fenêtre
+# Définir les dimensions de la fenêtre - RÉDUITES d'environ 150 pixels
 GRID_SIZE = 9
-LARGEUR, HAUTEUR = 900, 900
-MARGE = 50
-ESPACEMENT = 8
+LARGEUR, HAUTEUR = 750, 750  # Anciennement 900x900
+MARGE = 40  # Réduite proportionnellement (était 50)
+ESPACEMENT = 7  # Légèrement réduit (était 8)
 TAILLE_CASE = (LARGEUR - 2*MARGE - 8*ESPACEMENT) // GRID_SIZE
 
 # Créer la fenêtre - initialisation reportée à launch_game
@@ -1092,14 +1092,14 @@ def show_winner(winner):
     global murs, current_game_mode
     murs = []
 
-    button_width = 300
-    button_height = 60
+    button_width = 250  # Réduit de 300
+    button_height = 50   # Réduit de 60
     was_pve_mode = current_game_mode == 'PVE'
 
     try:
         while True:
             fenetre.fill(FOND)
-            draw_text(f"Joueur {winner} gagne !", font_title, BUTTON_COLOR, fenetre, LARGEUR//2, HAUTEUR//2 - 100)
+            draw_text(f"Joueur {winner} gagne !", font_title, BUTTON_COLOR, fenetre, LARGEUR//2, HAUTEUR//2 - 80)
 
             # Bouton Menu Principal
             draw_button(fenetre, "Menu Principal", (LARGEUR - button_width)//2, HAUTEUR//2,
@@ -1571,9 +1571,9 @@ def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
         return
 
 def difficulty_menu():
-    button_width = 450
-    button_height = 80
-    button_spacing = 40
+    button_width = 350  # Réduit de 450
+    button_height = 70  # Réduit de 80
+    button_spacing = 30  # Réduit de 40
     total_height = button_height * 3 + button_spacing * 2 + 100
 
     try:
@@ -1617,9 +1617,9 @@ def restart_game(was_pve_mode=False):
         mainPVP()
 
 def ai_vs_ai_difficulty_menu():
-    button_width = 450
-    button_height = 80
-    button_spacing = 40
+    button_width = 350  # Réduit de 450
+    button_height = 70  # Réduit de 80
+    button_spacing = 30  # Réduit de 40
 
     # Utiliser un dictionnaire pour stocker les valeurs modifiables
     state = {
@@ -1685,8 +1685,8 @@ def ai_vs_ai_difficulty_menu():
 
 def batch_ai_menu():
     """Menu de configuration des matchs en batch"""
-    button_width = 400
-    button_height = 60
+    button_width = 320  # Réduit de 400
+    button_height = 50  # Réduit de 60
     state = {
         "ia1_diff": DIFFICULTY_EASY,
         "ia2_diff": DIFFICULTY_EASY,
@@ -1708,34 +1708,34 @@ def batch_ai_menu():
 
             # Sélection difficulté IA1
             y = 200
-            draw_text("IA 1 (Rouge):", font_button, BLANC, fenetre, LARGEUR//2 - 200, y)
+            draw_text("IA 1 (Rouge):", font_button, BLANC, fenetre, LARGEUR//2 - 160, y)
             for i, diff in enumerate(difficulty_options):
-                x = LARGEUR//2 - 150 + i*130
+                x = LARGEUR//2 - 120 + i*110
                 selected = state["ia1_diff"] == diff["value"]
                 draw_button(fenetre, diff["name"], x, y, 
-                          120, 40, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
+                          100, 35, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
                           lambda d=diff["value"]: state.update({"ia1_diff": d}))
 
             # Sélection difficulté IA2
-            y += 80
-            draw_text("IA 2 (Bleu):", font_button, BLANC, fenetre, LARGEUR//2 - 200, y)
+            y += 70
+            draw_text("IA 2 (Bleu):", font_button, BLANC, fenetre, LARGEUR//2 - 160, y)
             for i, diff in enumerate(difficulty_options):
-                x = LARGEUR//2 - 150 + i*130
+                x = LARGEUR//2 - 120 + i*110
                 selected = state["ia2_diff"] == diff["value"]
                 draw_button(fenetre, diff["name"], x, y, 
-                          120, 40, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
+                          100, 35, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
                           lambda d=diff["value"]: state.update({"ia2_diff": d}))
 
             # Nombre de matchs
-            y += 100
+            y += 90
             draw_text(f"Nombre de matchs: {state['num_matches']}", font_button, BLANC, fenetre, LARGEUR//2, y)
-            draw_button(fenetre, "-", LARGEUR//2 - 100, y + 40, 50, 40, BUTTON_COLOR, BUTTON_HOVER_COLOR,
+            draw_button(fenetre, "-", LARGEUR//2 - 80, y + 40, 40, 35, BUTTON_COLOR, BUTTON_HOVER_COLOR,
                        lambda: state.update({"num_matches": max(1, state["num_matches"]-1)}))
-            draw_button(fenetre, "+", LARGEUR//2 + 50, y + 40, 50, 40, BUTTON_COLOR, BUTTON_HOVER_COLOR,
+            draw_button(fenetre, "+", LARGEUR//2 + 40, y + 40, 40, 35, BUTTON_COLOR, BUTTON_HOVER_COLOR,
                        lambda: state.update({"num_matches": state["num_matches"]+1}))
 
             # Bouton de lancement
-            draw_button(fenetre, "LANCER", LARGEUR//2 - 100, HAUTEUR - 100, 200, 60, 
+            draw_button(fenetre, "LANCER", LARGEUR//2 - 80, HAUTEUR - 90, 160, 50, 
                       (0, 150, 0), (0, 200, 0), 
                       lambda: run_batch_simulations(state["ia1_diff"], state["ia2_diff"], state["num_matches"]))
 
@@ -1751,15 +1751,15 @@ def batch_ai_menu():
         return
 
 def main_menu():
-    button_width = 450
-    button_height = 80
-    button_spacing = 40
+    button_width = 350  # Réduit de 450
+    button_height = 70  # Réduit de 80
+    button_spacing = 30  # Réduit de 40
     total_height = button_height * 4 + button_spacing * 3 + 150  # Ajusté pour 4 boutons
 
     try:
         while True:
             fenetre.fill(FOND)
-            draw_text("QUORRIDOR", font_title, BUTTON_COLOR, fenetre, LARGEUR // 2, 250)
+            draw_text("QUORRIDOR", font_title, BUTTON_COLOR, fenetre, LARGEUR // 2, 200)
 
             start_y = (HAUTEUR - total_height) // 2 + 150
             draw_button(fenetre, "Joueur Vs Joueur", (LARGEUR - button_width) // 2, start_y,
@@ -2058,14 +2058,14 @@ def launch_game(game_params=None):
         fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
         pygame.display.set_caption("Quoridor")
     
-    # Charger les polices
+    # Charger les polices avec des tailles réduites adaptées à la fenêtre plus petite
     try:
-        font_title = pygame.font.Font('NovaSquare-Regular.ttf', 150)
-        font_button = pygame.font.Font('NovaSquare-Regular.ttf', 35)
+        font_title = pygame.font.Font('NovaSquare-Regular.ttf', 120)  # Réduit de 150
+        font_button = pygame.font.Font('NovaSquare-Regular.ttf', 28)  # Réduit de 35
     except FileNotFoundError:
         print("Police non trouvée, utilisation de la police par défaut")
-        font_title = pygame.font.SysFont('arial', 150)
-        font_button = pygame.font.SysFont('arial', 35)
+        font_title = pygame.font.SysFont('arial', 120)  # Réduit de 150
+        font_button = pygame.font.SysFont('arial', 28)  # Réduit de 35
     
     # Si aucun paramètre n'est fourni, montrer le menu principal
     if game_params is None:

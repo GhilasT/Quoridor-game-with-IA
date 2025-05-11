@@ -611,6 +611,35 @@ class QuoridorMenuApp:
         
         # Set the window to remain open until manually closed
         self.progress_window.protocol("WM_DELETE_WINDOW", self.progress_window.destroy)
+    
+    def start_game(self, mode):
+        """
+        Start the game with the selected mode and parameters
+        
+        Args:
+            mode: Game mode ('PVP', 'PVE', or 'AIvsAI')
+        """
+        game_params = {
+            'mode': mode,
+            'difficulty': self.selected_difficulty
+        }
+        
+        # For AI vs AI mode, we need to pass both AI difficulties
+        if mode == 'AIvsAI':
+            game_params.update({
+                'ai1_difficulty': self.selected_ai1_difficulty,
+                'ai2_difficulty': self.selected_ai2_difficulty
+            })
+            
+        # Save the parameters for later use by the launcher
+        self.game_params = game_params
+        
+        # Close the Tkinter window to allow Pygame to take focus
+        # Unless this is a batch simulation which needs the Tkinter window
+        if mode != 'BatchAI':
+            self.root.destroy()
+        
+        # The launcher will pick up the game_params and start the game
 
 def launch_menu():
     root = tk.Tk()
