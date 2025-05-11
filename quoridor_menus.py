@@ -3,6 +3,7 @@ from tkinter import ttk
 import sys
 import os
 import importlib.util
+import threading
 
 # Import our game module
 try:
@@ -50,6 +51,14 @@ class QuoridorMenuApp:
         self.selected_ai2_difficulty = self.DIFFICULTY_MEDIUM
         self.num_matches = 100
         self.game_params = None
+        
+        # Add progress tracking attributes
+        self.progress_window = None
+        self.progress_var = None
+        self.progress_label = None
+        self.progress_count_label = None
+        self.result_text = None
+        self.batch_thread = None
         
         # Create the main menu
         self.create_main_menu()
@@ -433,26 +442,175 @@ class QuoridorMenuApp:
         self.num_matches = num_matches
         self.selected_ai1_difficulty = ia1_difficulty
         self.selected_ai2_difficulty = ia2_difficulty
-        self.start_game('BatchAI')
-    
-    def start_game(self, mode):
-        """Starts the game with the selected options using the Pygame module"""
-        self.selected_mode = mode
         
-        # Prepare game parameters
+        # Instead of directly starting the game, create a progress window
+        self.show_progress_window(num_matches, ia1_difficulty, ia2_difficulty)
+        
+    def show_progress_window(self, num_matches, ia1_difficulty, ia2_difficulty):
+        """Create and show a progress window for batch simulations"""
+        # Create a new top level window
+        self.progress_window = tk.Toplevel(self.root)
+        self.progress_window.title("Simulation en cours")
+        self.progress_window.configure(bg="#0a1428")
+        self.progress_window.geometry("500x350")
+        self.progress_window.transient(self.root)  # Make it a child of the main window
+        self.progress_window.grab_set()  # Make it modal
+        
+        # Set difficulty names for display
+        difficulty_names = {
+            self.DIFFICULTY_EASY: "Facile",
+            self.DIFFICULTY_MEDIUM: "Intermédiaire",
+            self.DIFFICULTY_HARD: "Difficile"
+        }
+        ia1_name = difficulty_names.get(ia1_difficulty, "Inconnu")
+        ia2_name = difficulty_names.get(ia2_difficulty, "Inconnu")
+        
+        # Title
+        title_label = tk.Label(
+            self.progress_window, 
+            text=f"Simulation: {ia1_name} vs {ia2_name}", 
+            font=('Nova Square', 18, 'bold'),
+            bg="#0a1428",
+            fg="#FFD700"
+        )
+        title_label.pack(pady=(20, 30))
+        
+        # Match counter
+        self.progress_count_label = tk.Label(
+            self.progress_window,
+            text=f"Match: 0/{num_matches}",
+            font=('Nova Square', 16),
+            bg="#0a1428",
+            fg="white"
+        )
+        self.progress_count_label.pack(pady=(0, 10))
+        
+        # Progress bar
+        self.progress_var = tk.DoubleVar()
+        progress_bar = ttk.Progressbar(
+            self.progress_window,
+            variable=self.progress_var,
+            maximum=num_matches,
+            length=400,
+            mode='determinate'
+        )
+        progress_bar.pack(pady=20)
+        
+        # Status label
+        self.progress_label = tk.Label(
+            self.progress_window,
+            text="Initialisation...",
+            font=('Nova Square', 14),
+            bg="#0a1428",
+            fg="#FFD700"
+        )
+        self.progress_label.pack(pady=(10, 20))
+        
+        # Results text widget
+        self.result_text = tk.Text(
+            self.progress_window,
+            width=50,
+            height=6,
+            font=('Nova Square', 12),
+            bg="#1a2438",
+            fg="white"
+        )
+        self.result_text.pack(pady=10)
+        self.result_text.insert(tk.END, "Les résultats apparaîtront ici à la fin de la simulation.\n")
+        self.result_text.config(state=tk.DISABLED)  # Make it read-only initially
+        
+        # Now prepare the game parameters
         game_params = {
-            'mode': mode,
+            'mode': 'BatchAI',
             'difficulty': self.selected_difficulty,
-            'ai1_difficulty': self.selected_ai1_difficulty,
-            'ai2_difficulty': self.selected_ai2_difficulty,
-            'num_matches': self.num_matches
+            'ai1_difficulty': ia1_difficulty,
+            'ai2_difficulty': ia2_difficulty,
+            'num_matches': num_matches,
+            'progress_callback': self.update_progress,
+            'result_callback': self.show_batch_results
         }
         
         # Save the game parameters for later use
         self.game_params = game_params
         
-        # Close the Tkinter window properly
-        self.root.quit()
+        # Start the simulation in a separate thread
+        self.batch_thread = threading.Thread(target=self.run_batch_simulation, args=(game_params,))
+        self.batch_thread.daemon = True
+        self.batch_thread.start()
+        
+    def run_batch_simulation(self, game_params):
+        """Run the batch simulation by calling the Pygame module"""
+        try:
+            # We're checking if the quoridor_game module is available
+            if not hasattr(quoridor_game, "run_batch_simulations_with_progress"):
+                self.progress_label.config(text="Erreur: fonction de simulation introuvable")
+                return
+                
+            # Run the batch simulation with progress updates
+            quoridor_game.run_batch_simulations_with_progress(
+                game_params['ai1_difficulty'],
+                game_params['ai2_difficulty'],
+                game_params['num_matches'],
+                game_params['progress_callback'],
+                game_params['result_callback']
+            )
+        except Exception as e:
+            self.progress_label.config(text=f"Erreur: {str(e)}")
+            
+    def update_progress(self, current_match, total_matches, status_text="En cours..."):
+        """Update the progress bar and labels"""
+        if self.progress_window and self.progress_window.winfo_exists():
+            self.progress_var.set(current_match)
+            self.progress_count_label.config(text=f"Match: {current_match}/{total_matches}")
+            self.progress_label.config(text=status_text)
+            # Force update the window
+            self.progress_window.update_idletasks()
+            
+    def show_batch_results(self, results):
+        """Show the batch simulation results"""
+        if not self.progress_window or not self.progress_window.winfo_exists():
+            return
+            
+        # Update status
+        self.progress_label.config(text="Simulation terminée!")
+        
+        # Update results text
+        self.result_text.config(state=tk.NORMAL)
+        self.result_text.delete(1.0, tk.END)
+        
+        # Format results
+        difficulty_names = {
+            self.DIFFICULTY_EASY: "Facile",
+            self.DIFFICULTY_MEDIUM: "Intermédiaire",
+            self.DIFFICULTY_HARD: "Difficile"
+        }
+        ia1_name = difficulty_names.get(self.selected_ai1_difficulty, "IA1")
+        ia2_name = difficulty_names.get(self.selected_ai2_difficulty, "IA2")
+        
+        # Add results text
+        self.result_text.insert(tk.END, f"Résultats finaux:\n")
+        total = sum(results.values())
+        if total > 0:
+            self.result_text.insert(tk.END, f"- {ia1_name}: {results[1]} victoires ({results[1]/total*100:.1f}%)\n")
+            self.result_text.insert(tk.END, f"- {ia2_name}: {results[2]} victoires ({results[2]/total*100:.1f}%)\n")
+            self.result_text.insert(tk.END, f"- Matchs nuls: {results[0]} ({results[0]/total*100:.1f}%)\n")
+        else:
+            self.result_text.insert(tk.END, "Aucun match n'a été complété avec succès.\n")
+        self.result_text.config(state=tk.DISABLED)
+        
+        # Add a close button
+        close_button = tk.Button(
+            self.progress_window,
+            text="Fermer",
+            font=('Nova Square', 14),
+            bg="#FFD700",
+            fg="#0a1428",
+            command=self.progress_window.destroy
+        )
+        close_button.pack(pady=20)
+        
+        # Set the window to remain open until manually closed
+        self.progress_window.protocol("WM_DELETE_WINDOW", self.progress_window.destroy)
 
 def launch_menu():
     root = tk.Tk()

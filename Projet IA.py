@@ -3,6 +3,7 @@ import pygame
 from collections import deque
 from heapq import heappush, heappop
 import random
+import tkinter as tk
 
 # Constantes pour les niveaux de difficulté
 DIFFICULTY_EASY = 2
@@ -1969,6 +1970,78 @@ def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     except Exception as e:
         print(f"Erreur pendant les simulations: {str(e)}")
 
+def run_batch_simulations_with_progress(difficulte_ia1, difficulte_ia2, num_matches, 
+                                       progress_callback=None, result_callback=None):
+    """
+    Version améliorée qui exécute une série de matchs avec suivi de progression
+    
+    Args:
+        difficulte_ia1: Niveau de difficulté de l'IA1
+        difficulte_ia2: Niveau de difficulté de l'IA2
+        num_matches: Nombre total de matchs à exécuter
+        progress_callback: Fonction appelée pour mettre à jour la progression
+        result_callback: Fonction appelée pour afficher les résultats finaux
+    """
+    difficulty_names = {
+        DIFFICULTY_EASY: "Facile",
+        DIFFICULTY_MEDIUM: "Intermédiaire",
+        DIFFICULTY_HARD: "Difficile"
+    }
+    ia1_name = difficulty_names.get(difficulte_ia1, "Inconnu")
+    ia2_name = difficulty_names.get(difficulte_ia2, "Inconnu")
+    
+    print(f"\nDébut de {num_matches} matchs {ia1_name} vs {ia2_name}...")
+    scores = {0: 0, 1: 0, 2: 0}  # Clé 0 pour les matchs nuls
+    
+    # Minimiser la fenêtre pygame pour qu'elle reste en arrière-plan
+    if fenetre:
+        pygame.display.iconify()
+    
+    try:
+        for match in range(1, num_matches + 1):
+            # Mise à jour de la progression
+            if progress_callback:
+                status = f"Simulation du match {match}/{num_matches}..."
+                progress_callback(match-1, num_matches, status)
+                
+            gagnant = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
+            
+            # Vérifier que le résultat est valide (0, 1 or 2)
+            if gagnant not in scores:
+                print(f"Erreur: résultat invalide {gagnant}, considéré comme match nul")
+                gagnant = 0
+                
+            scores[gagnant] += 1
+            if gagnant == 0:
+                resultat = "Match nul"
+            else:
+                resultat = f"{ia1_name if gagnant == 1 else ia2_name} gagne"
+            print(f"- Match {match}/{num_matches} : {resultat}")
+            
+            # Mise à jour de la progression après le match
+            if progress_callback:
+                status = f"Match {match}/{num_matches} terminé: {resultat}"
+                progress_callback(match, num_matches, status)
+
+        print("\nRésultats finaux:")
+        total = sum(scores.values())
+        if total > 0:  # Éviter division par zéro
+            print(f"- {ia1_name}: {scores[1]} victoires ({scores[1]/total*100:.1f}%)")
+            print(f"- {ia2_name}: {scores[2]} victoires ({scores[2]/total*100:.1f}%)")
+            print(f"- Matchs nuls: {scores[0]} ({scores[0]/total*100:.1f}%)")
+        else:
+            print("Aucun match n'a été complété avec succès.")
+        print("----------------------------------")
+        
+        # Appel à la fonction de rappel pour afficher les résultats finaux
+        if result_callback:
+            result_callback(scores)
+        
+    except Exception as e:
+        print(f"Erreur pendant les simulations: {str(e)}")
+        if progress_callback:
+            progress_callback(match, num_matches, f"Erreur: {str(e)}")
+
 def launch_game(game_params=None):
     """
     Point d'entrée principal pour lancer le jeu depuis un autre script
@@ -2020,8 +2093,18 @@ def launch_game(game_params=None):
         diff_ia1 = game_params.get('ai1_difficulty', DIFFICULTY_MEDIUM)
         diff_ia2 = game_params.get('ai2_difficulty', DIFFICULTY_MEDIUM)
         num_matches = game_params.get('num_matches', 100)
-        run_batch_simulations(diff_ia1, diff_ia2, num_matches)
-        main_menu()  # Retourner au menu après les simulations
+        
+        # Check if we're using the new progress tracking
+        progress_callback = game_params.get('progress_callback')
+        result_callback = game_params.get('result_callback')
+        
+        if progress_callback and result_callback:
+            run_batch_simulations_with_progress(diff_ia1, diff_ia2, num_matches, 
+                                              progress_callback, result_callback)
+        else:
+            # Fallback to the old method
+            run_batch_simulations(diff_ia1, diff_ia2, num_matches)
+            main_menu()  # Retourner au menu après les simulations
     else:
         main_menu()
 

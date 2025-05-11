@@ -38,14 +38,20 @@ def main():
     
     # Then, if we have game parameters, launch the Pygame game
     if game_params:
-        # Ensure Tkinter is completely shut down
-        import tkinter as tk
-        for widget in tk._default_root.winfo_children():
-            widget.destroy()
-        tk._default_root.destroy()
-        
-        # Now launch the game in the main thread
-        quoridor_game.launch_game(game_params)
+        # Check if this is a batch simulation with callbacks
+        if game_params.get('mode') == 'BatchAI' and game_params.get('progress_callback'):
+            # In this case, we don't want to destroy the Tkinter window
+            # as it will be used to display progress
+            quoridor_game.launch_game(game_params)
+        else:
+            # For all other modes, ensure Tkinter is completely shut down
+            import tkinter as tk
+            for widget in tk._default_root.winfo_children():
+                widget.destroy()
+            tk._default_root.destroy()
+            
+            # Now launch the game in the main thread
+            quoridor_game.launch_game(game_params)
 
 if __name__ == "__main__":
     main()
