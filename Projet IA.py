@@ -533,6 +533,7 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, dif
     # Analyser chaque segment du chemin pour les murs potentiels
     for i in range(min(chemins_a_analyser, len(chemin) - 1)):
         curr_i, curr_j = chemin[i]
+
         next_i, next_j = chemin[i + 1]
 
         # Différence de position
@@ -941,8 +942,12 @@ def has_path(start_pos, target_row, walls):
                         queue.append((ni, nj))
     return False
 
-def gestion_clic_souris(pos_souris, grille):
+def gestion_clic_souris(pos_souris, grille, murs_restants):
     global murs
+
+    # If no walls left, prevent wall placement
+    if murs_restants <= 0:
+        return False
 
     x_relatif = pos_souris[0] - MARGE
     y_relatif = pos_souris[1] - MARGE
@@ -1170,7 +1175,7 @@ def mainPVE(difficulte=None):
                             if i is not None and j is not None and grille[i][j] == tour_joueur:
                                 joueur_selectionne = (i, j)
                                 possible_moves = get_possible_moves(i, j, tour_joueur, grille)
-                            elif gestion_clic_souris(event.pos, grille):
+                            elif gestion_clic_souris(event.pos, grille, murs_restants_j1):
                                 # Le joueur a posé un mur
                                 murs_restants_j1 -= 1
                                 possible_moves = []
@@ -1214,7 +1219,7 @@ def mainPVE(difficulte=None):
                         if ni == 0:
                             show_winner(2)
                             return
-                elif coup and type_coup == "mur":
+                elif coup and type_coup == "mur" and murs_restants_j2 > 0:
                     # Prévisualisation du mur
                     global mur_preview
                     mur_preview = coup
@@ -1275,6 +1280,9 @@ def mainPVP():
     tour_joueur = 1
     joueur_selectionne = None
     possible_moves = []
+    # Ajout du compteur de murs pour chaque joueur
+    murs_restants_j1 = 10
+    murs_restants_j2 = 10
 
     try:
         while True:
@@ -1310,17 +1318,36 @@ def mainPVP():
                                     tour_joueur = 2 if tour_joueur == 1 else 1
 
                     else:
-                        if gestion_clic_souris(event.pos, grille):
+                        # Utiliser le compteur de murs du joueur actuel
+                        murs_restants = murs_restants_j1 if tour_joueur == 1 else murs_restants_j2
+                        if gestion_clic_souris(event.pos, grille, murs_restants):
+                            # Décrémenter le nombre de murs du joueur actuel
+                            if tour_joueur == 1:
+                                murs_restants_j1 -= 1
+                            else:
+                                murs_restants_j2 -= 1
                             possible_moves = []
                             tour_joueur = 2 if tour_joueur == 1 else 1
                         elif i is not None and j is not None and grille[i][j] == tour_joueur:
                             joueur_selectionne = (i, j)
                             possible_moves = get_possible_moves(i, j, tour_joueur, grille)
                 elif event.type == pygame.MOUSEMOTION:
-                    gestion_hover_souris(event.pos)
+                    # Ne montrer la prévisualisation que si le joueur actuel a des murs disponibles
+                    murs_restants = murs_restants_j1 if tour_joueur == 1 else murs_restants_j2
+                    if murs_restants > 0:
+                        gestion_hover_souris(event.pos)
+                    else:
+                        global mur_preview
+                        mur_preview = None
 
             dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
             dessiner_murs(fenetre)
+            
+            # Afficher le nombre de murs restants pour chaque joueur
+            mur_font = pygame.font.Font('NovaSquare-Regular.ttf', 20)
+            draw_text(f"Murs J1: {murs_restants_j1}", mur_font, BLANC, fenetre, LARGEUR - 100, 20)
+            draw_text(f"Murs J2: {murs_restants_j2}", mur_font, BLANC, fenetre, LARGEUR - 100, 50)
+            
             pygame.display.flip()
     except ReturnToMenu:
         return
