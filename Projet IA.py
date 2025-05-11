@@ -4,13 +4,18 @@ from collections import deque
 from heapq import heappush, heappop
 import random
 
+# Constantes pour les niveaux de difficulté
+DIFFICULTY_EASY = 2
+DIFFICULTY_MEDIUM = 5
+DIFFICULTY_HARD = 7
+
 # Nouvelle exception pour le retour au menu
 class ReturnToMenu(Exception):
     pass
 
 # Variables globales pour le suivi d'état
-current_game_mode = None  # NEW
-current_difficulty = 2    # NEW
+current_game_mode = None
+current_difficulty = DIFFICULTY_MEDIUM
 
 # Initialiser Pygame
 pygame.init()
@@ -134,12 +139,13 @@ def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_pr
     dist_joueur, chemin_joueur = a_star_search(pos_joueur, ligne_obj_joueur, murs)
     dist_adversaire, chemin_adversaire = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
     
-    # Coefficients de pondération
-    poids_distance = 5.0
-    poids_avance = 3.0 
-    poids_position_centrale = 0.5
+    # Coefficients de pondération - RÉDUITS pour l'IA facile
+    poids_distance = 3.0  # Réduit de 5.0 à 3.0
+    poids_avance = 2.0    # Réduit de 3.0 à 2.0
+    poids_position_centrale = 0.3  # Réduit de 0.5 à 0.3
     
     # Distance et progression - positif quand favorable au joueur_principal
+    # IA facile: fonction simplifiée qui favorise moins les situations avantageuses
     position_score = (dist_adversaire - dist_joueur) * poids_distance
     
     # Calcul de la progression vers l'objectif
@@ -160,7 +166,10 @@ def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_pr
         murs_restants_adversaire = murs_restants_j2 if joueur_num == 1 else murs_restants_j1
         murs_score = (murs_restants_joueur - murs_restants_adversaire) * 0.5
     
-    return position_score + progres_joueur + centre_score + murs_score
+    # Ajouter plus d'aléatoire pour le niveau facile pour éviter les répétitions et rendre moins prévisible
+    random_factor = random.uniform(-2.0, 2.0)  # Augmenté de -0.5/0.5 à -2.0/2.0
+    
+    return position_score + progres_joueur + centre_score + murs_score + random_factor
 
 def evaluer_position_intermediaire(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal=2):
     """
@@ -317,7 +326,7 @@ def evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2,
     return position_score + progres_joueur + centre_score + position_strategique + score_flexibilite + murs_score
 
 def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha, beta, 
-           est_maximisant, tour_joueur, joueur_principal=2, difficulte=5):
+           est_maximisant, tour_joueur, joueur_principal=2, difficulte=DIFFICULTY_HARD):
     """
     Implémentation unifiée de minimax avec élagage alpha-beta.
     Utilise différentes fonctions d'évaluation selon la difficulté.
@@ -338,11 +347,11 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
     """
     # Vérifier fin de partie ou profondeur max atteinte
     if profondeur == 0:
-        if difficulte == 1:
+        if difficulte == DIFFICULTY_EASY:
             return evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
-        elif difficulte == 3:
+        elif difficulte == DIFFICULTY_MEDIUM:
             return evaluer_position_intermediaire(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
-        else:  # difficulté 5
+        else:  # difficulté DIFFICULTY_HARD
             return evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
 
     pos_joueur = find_player_position(grille, tour_joueur)
@@ -359,6 +368,14 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
     # Obtenir coups possibles
     i, j = pos_joueur
     coups_possibles = get_possible_moves(i, j, tour_joueur, grille)
+
+    # Pour le niveau facile, considérer seulement une partie des coups possibles
+    if difficulte == DIFFICULTY_EASY:
+        # Limiter les choix à examiner pour l'IA facile
+        if len(coups_possibles) > 2:
+            # Ne considérer que 2 coups aléatoires ou quelques coups de base
+            random.shuffle(coups_possibles)
+            coups_possibles = coups_possibles[:2]
 
     # Tour du joueur maximisant (joueur_principal)
     if est_maximisant:
@@ -382,6 +399,10 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
 
             # Élagage
             if beta <= alpha:
+                break
+
+            # Pour l'IA facile, ajouter une chance d'arrêter l'exploration prématurément
+            if difficulte == DIFFICULTY_EASY and random.random() < 0.3:
                 break
 
         return meilleur_score
@@ -409,6 +430,10 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
             # Élagage
             if beta <= alpha:
                 break
+                
+            # Pour l'IA facile, ajouter une chance d'arrêter l'exploration prématurément
+            if difficulte == DIFFICULTY_EASY and random.random() < 0.3:
+                break
 
         return meilleur_score
 
@@ -421,6 +446,12 @@ def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profo
     if not coups_possibles:
         return None, None
         
+    # Pour éviter les répétitions en mode facile, ajouter une petite perturbation aléatoire
+    if difficulte == DIFFICULTY_EASY:
+        # Augmenter la probabilité de choisir un coup aléatoire pour l'IA facile
+        if random.random() < 0.40:  # 40% de chance (augmenté de 15%)
+            return random.choice(coups_possibles), "deplacement"
+        
     meilleur_score = float('-inf')
     meilleur_coup = None
     
@@ -431,28 +462,40 @@ def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profo
         
         # Bonus pour direction favorable
         if (joueur_num == 1 and ni > i) or (joueur_num == 2 and ni < i):
-            score_base += 2 if difficulte == 5 else 3  # Plus agressif pour l'IA intermédiaire
+            # Réduire le bonus pour le niveau facile
+            score_base += 0.5 if difficulte == DIFFICULTY_EASY else 1  
             
         # Bonus pour position centrale
         if 3 <= nj <= 5:
-            score_base += 1
+            score_base += 0.2 if difficulte == DIFFICULTY_EASY else 0.5
             
         # Simuler le déplacement
         grille_temp = [ligne[:] for ligne in grille]
         grille_temp[i][j] = 0
         grille_temp[ni][nj] = joueur_num
         
-        # Évaluation minimax avec la difficulté appropriée
-        score_minimax = minimax(grille_temp, murs, 
-                              murs_restants_j1=murs_restants_adversaire if joueur_num == 2 else murs_restants_joueur,
-                              murs_restants_j2=murs_restants_adversaire if joueur_num == 1 else murs_restants_joueur,
-                              profondeur=profondeur - 1, 
-                              alpha=float('-inf'), beta=float('inf'), 
-                              est_maximisant=False, 
-                              tour_joueur=3 - joueur_num,
-                              joueur_principal=joueur_num,
-                              difficulte=difficulte)
+        # Pour l'IA facile, parfois ne pas utiliser minimax du tout
+        if difficulte == DIFFICULTY_EASY and random.random() < 0.25:
+            score_minimax = score_base + random.uniform(-1, 1)
+        else:
+            # Réduire la profondeur pour l'IA facile
+            depth_adjusted = max(1, profondeur - 1) if difficulte == DIFFICULTY_EASY else profondeur
+            
+            # Évaluation minimax avec la difficulté appropriée
+            score_minimax = minimax(grille_temp, murs, 
+                                  murs_restants_j1=murs_restants_adversaire if joueur_num == 2 else murs_restants_joueur,
+                                  murs_restants_j2=murs_restants_adversaire if joueur_num == 1 else murs_restants_joueur,
+                                  profondeur=depth_adjusted - 1, 
+                                  alpha=float('-inf'), beta=float('inf'), 
+                                  est_maximisant=False, 
+                                  tour_joueur=3 - joueur_num,
+                                  joueur_principal=joueur_num,
+                                  difficulte=difficulte)
         
+        # Pour le niveau facile, ajouter un facteur aléatoire plus important
+        if difficulte == DIFFICULTY_EASY:
+            score_minimax += random.uniform(-3.0, 3.0)  # Augmenté de -1.0/1.0 à -3.0/3.0
+            
         # Score final
         score_final = score_base + score_minimax
         
@@ -462,7 +505,7 @@ def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profo
             
     return meilleur_coup, "deplacement"
 
-def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, difficulte=5):
+def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, difficulte=DIFFICULTY_HARD):
     """Identifie les murs potentiels qui ralentissent efficacement l'adversaire"""
     # Trouver le chemin optimal actuel
     dist_actuelle, chemin = a_star_search(pos_joueur, target_row, walls)
@@ -472,10 +515,18 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, dif
     
     # Stratégies différentes selon la difficulté
     chemins_a_analyser = 1  # Base 
-    if difficulte == 3:
+    
+    # Pour le niveau facile, réduire encore plus l'analyse stratégique
+    if difficulte == DIFFICULTY_EASY:
+        # L'IA facile ne regardera qu'un segment à la fois et ne sera pas efficace pour les murs
+        chemins_a_analyser = 1
+        # Si le chemin est court ou chance aléatoire, ne pas analyser du tout
+        if len(chemin) < 3 or random.random() < 0.3:
+            return []
+    elif difficulte == DIFFICULTY_MEDIUM:
         # L'IA intermédiaire analysera plus de segments pour trouver des opportunités de blocage
         chemins_a_analyser = min(len(chemin) - 1, 4)  # Analyser jusqu'à 4 segments du chemin
-    elif difficulte == 5:
+    elif difficulte == DIFFICULTY_HARD:
         # L'IA difficile est plus sélective et efficace
         chemins_a_analyser = min(len(chemin) - 1, 3)  # Analyser jusqu'à 3 segments du chemin
 
@@ -499,7 +550,7 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, dif
             murs_possibles.append({'x': x, 'y': curr_i, 'orientation': 'V'})
             
             # Pour le niveau intermédiaire, ajouter des murs adjacents pour créer des labyrinthes
-            if difficulte == 3 and curr_i > 0 and curr_i < GRID_SIZE-1:
+            if difficulte == DIFFICULTY_MEDIUM and curr_i > 0 and curr_i < GRID_SIZE-1:
                 murs_possibles.append({'x': x - 1 if x > 0 else x, 'y': curr_i, 'orientation': 'H'})
                 murs_possibles.append({'x': x, 'y': curr_i, 'orientation': 'H'})
 
@@ -511,9 +562,18 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, dif
             murs_possibles.append({'x': curr_j, 'y': y, 'orientation': 'H'})
             
             # Pour le niveau intermédiaire, ajouter des murs adjacents pour créer des labyrinthes
-            if difficulte == 3 and curr_j > 0 and curr_j < GRID_SIZE-1:
+            if difficulte == DIFFICULTY_MEDIUM and curr_j > 0 and curr_j < GRID_SIZE-1:
                 murs_possibles.append({'x': curr_j, 'y': y - 1 if y > 0 else y, 'orientation': 'V'})
                 murs_possibles.append({'x': curr_j, 'y': y, 'orientation': 'V'})
+
+        # Niveau facile: évaluer moins précisément les murs (parfois ignorer complètement)
+        if difficulte == DIFFICULTY_EASY and random.random() < 0.4:
+            # Juste ajouter des murs au hasard parmi ceux disponibles
+            if murs_possibles:
+                mur = random.choice(murs_possibles)
+                if mur_est_valide(mur) and mur not in walls:
+                    murs_candidats.append((mur, 1))  # Gain arbitraire de 1
+            continue  # Passer à l'itération suivante
 
         # Évaluer chaque mur possible
         for mur in murs_possibles:
@@ -540,8 +600,12 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, dif
                         # Gain = augmentation de distance
                         gain = nouvelle_dist - dist_actuelle
                         
+                        # Pour l'IA facile, sous-estimer l'impact des murs
+                        if difficulte == DIFFICULTY_EASY:
+                            gain = gain * 0.5  # Réduit l'importance perçue des murs
+                            
                         # Pour l'IA intermédiaire, considérer aussi les murs qui créent des détours plus longs
-                        if difficulte == 3 and gain > 0:
+                        if difficulte == DIFFICULTY_MEDIUM and gain > 0:
                             # Bonus pour les murs qui forcent l'adversaire à faire un grand détour
                             chemins_avant = count_chemins_alternatifs(pos_joueur, target_row, walls, max_depth=4)
                             chemins_apres = count_chemins_alternatifs(pos_joueur, target_row, temp_walls, max_depth=4)
@@ -556,9 +620,17 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, dif
     # Trier les murs par gain décroissant
     murs_candidats.sort(key=lambda x: x[1], reverse=True)
 
+    # Pour le niveau facile, introduire de l'aléatoire dans la sélection
+    if difficulte == DIFFICULTY_EASY and murs_candidats:
+        # Parfois choisir des murs au hasard au lieu des meilleurs
+        if random.random() < 0.5:  # 50% de chance
+            random.shuffle(murs_candidats)
+
     # Retourner les meilleurs murs (plus nombreux pour l'IA intermédiaire)
-    if difficulte == 3:
+    if difficulte == DIFFICULTY_MEDIUM:
         return [mur for mur, _ in murs_candidats[:7]]  # Plus d'options pour l'IA intermédiaire
+    elif difficulte == DIFFICULTY_EASY:
+        return [mur for mur, _ in murs_candidats[:2]]  # Moins d'options pour l'IA facile
     else:
         return [mur for mur, _ in murs_candidats[:5]]
 
@@ -575,7 +647,7 @@ def meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, joueur_nu
     meilleur_score = float('-inf')
     meilleur_mur = None
     
-    max_candidats = 7 if difficulte == 3 else 5
+    max_candidats = 7 if difficulte == DIFFICULTY_MEDIUM else 5
     
     for mur in murs_candidats[:max_candidats]:
         if mur_est_valide(mur) and mur not in murs:
@@ -597,7 +669,7 @@ def meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, joueur_nu
                               difficulte=difficulte)
                 
                 # Pour l'IA intermédiaire, favoriser les murs qui créent des déviations complexes
-                if difficulte == 3:
+                if difficulte == DIFFICULTY_MEDIUM:
                     # Vérifier l'impact sur les chemins alternatifs de l'adversaire
                     chemins_avant = count_chemins_alternatifs(pos_adversaire, ligne_obj_adv, murs, max_depth=4)
                     chemins_apres = count_chemins_alternatifs(pos_adversaire, ligne_obj_adv, temp_murs, max_depth=4)
@@ -644,67 +716,64 @@ def meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficult
 
     # Configuration selon la difficulté
     profondeur_recherche = {
-        1: 1,   # Facile
-        3: 3,   # Moyen
-        5: 4    # Difficile (légère augmentation)
+        DIFFICULTY_EASY: 1,   # Facile - profondeur minimale
+        DIFFICULTY_MEDIUM: 3,   # Moyen
+        DIFFICULTY_HARD: 4    # Difficile
     }.get(difficulte, 3)
     
     murs_restants_joueur = murs_restants_j1 if joueur_num == 1 else murs_restants_j2
     murs_restants_adversaire = murs_restants_j2 if joueur_num == 1 else murs_restants_j1
 
-    # Stratégie simplifiée pour le niveau facile
-    if difficulte == 1:
-        # Déplacement purement directionnel avec Manhattan
-        i, j = pos_joueur
-        coups_possibles = get_possible_moves(i, j, joueur_num, grille)
-        if not coups_possibles:
-            return None, None
-            
-        # Choisir le coup qui rapproche le plus de l'objectif
-        direction = -1 if joueur_num == 2 else 1
-        coups_tries = sorted(coups_possibles, key=lambda x: (direction * x[0], abs(x[1] - 4)))
-        return coups_tries[0], "deplacement"
-
-    # Stratégie pour niveau moyen et difficile
+    # Calcul des chemins vers l'objectif
+    ligne_obj_joueur = 8 if joueur_num == 1 else 0
+    ligne_obj_adversaire = 0 if joueur_num == 1 else 8
+    
+    dist_joueur, _ = a_star_search(pos_joueur, ligne_obj_joueur, murs)
+    dist_adv, _ = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
+    
+    # Ajuster la stratégie selon la difficulté
+    if difficulte == DIFFICULTY_EASY:  # Facile - utilisation simplifiée du minimax
+        # Pour l'IA facile, forte préférence pour des mouvements simples et prévisibles
+        priorite_deplacement = 0.90  # Augmenté de 0.85 à 0.90, très forte préférence pour le déplacement
+        # Ajouter un petit aléa pour éviter des comportements répétitifs
+        if random.random() < 0.2:  # 20% de chance de changer de stratégie
+            priorite_deplacement = 0.75
+        
+        # L'IA facile n'est pas consciente de son avantage ou désavantage
+        if random.random() < 0.6:  # 60% du temps, elle ignore la situation de jeu
+            # Se désintéresse parfois du placement stratégique des murs
+            if dist_adv <= 2 and random.random() < 0.5:  # même quand l'adversaire est proche de gagner
+                priorite_deplacement = 0.85
+    elif difficulte == DIFFICULTY_MEDIUM:  # Moyen - plus agressif avec les murs
+        # Plus de murs quand en désavantage ou quand l'adversaire est proche de gagner
+        if dist_joueur > dist_adv or dist_adv <= 3:
+            priorite_deplacement = 0.4  # 60% de chances de placer un mur
+        else:
+            priorite_deplacement = 0.65  # 35% de chances de placer un mur
+    else:  # Difficile - stratégie plus équilibrée
+        priorite_deplacement = 0.75 if dist_joueur <= dist_adv else 0.6
+        if dist_adv <= 2:  # Si l'adversaire est près de gagner, priorité aux murs
+            priorite_deplacement = 0.3
+    
+    # Décision: déplacement ou pose de mur
+    if random.random() < priorite_deplacement or murs_restants_joueur == 0:
+        # DÉPLACEMENT
+        return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
+                                              murs_restants_joueur, murs_restants_adversaire, difficulte)
     else:
-        # Calcul des chemins vers l'objectif
-        ligne_obj_joueur = 8 if joueur_num == 1 else 0
-        ligne_obj_adversaire = 0 if joueur_num == 1 else 8
+        # MUR
+        ligne_obj_adv = 8 if adversaire_num == 1 else 0
+        mur_candidat, type_coup = meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, 
+                                                        joueur_num, murs_restants_joueur, 
+                                                        murs_restants_adversaire, ligne_obj_adv, 
+                                                        profondeur_recherche, difficulte)
         
-        dist_joueur, _ = a_star_search(pos_joueur, ligne_obj_joueur, murs)
-        dist_adv, _ = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
-        
-        # Ajuster la stratégie selon la situation
-        if difficulte == 3:  # Moyen - plus agressif avec les murs
-            # Plus de murs quand en désavantage ou quand l'adversaire est proche de gagner
-            if dist_joueur > dist_adv or dist_adv <= 3:
-                priorite_deplacement = 0.4  # 60% de chances de placer un mur
-            else:
-                priorite_deplacement = 0.65  # 35% de chances de placer un mur
-        else:  # Difficile - stratégie plus équilibrée
-            priorite_deplacement = 0.75 if dist_joueur <= dist_adv else 0.6
-            if dist_adv <= 2:  # Si l'adversaire est près de gagner, priorité aux murs
-                priorite_deplacement = 0.3
-        
-        # Décision: déplacement ou pose de mur
-        if random.random() < priorite_deplacement or murs_restants_joueur == 0:
-            # DÉPLACEMENT
+        if mur_candidat:
+            return mur_candidat, type_coup
+        else:
+            # Fallback sur déplacement si pas de bon mur
             return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
                                                   murs_restants_joueur, murs_restants_adversaire, difficulte)
-        else:
-            # MUR
-            ligne_obj_adv = 8 if adversaire_num == 1 else 0
-            mur_candidat, type_coup = meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, 
-                                                            joueur_num, murs_restants_joueur, 
-                                                            murs_restants_adversaire, ligne_obj_adv, 
-                                                            profondeur_recherche, difficulte)
-            
-            if mur_candidat:
-                return mur_candidat, type_coup
-            else:
-                # Fallback sur déplacement si pas de bon mur
-                return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
-                                                      murs_restants_joueur, murs_restants_adversaire, difficulte)
 
 def dessiner_murs(surface):
     global mur_preview
@@ -1017,14 +1086,14 @@ def draw_button(surface, text, x, y, width, height, color, hover_color, action=N
     draw_text(text, font_button, TEXT_COLOR, surface, x + width // 2, y + height // 2)
     
 def show_winner(winner):
-    global murs, current_game_mode  # MODIFIED
+    global murs, current_game_mode
     murs = []
 
     button_width = 300
     button_height = 60
-    was_pve_mode = current_game_mode == 'PVE'  # MODIFIED
+    was_pve_mode = current_game_mode == 'PVE'
 
-    try:  # NEW
+    try:
         while True:
             fenetre.fill(FOND)
             draw_text(f"Joueur {winner} gagne !", font_title, BUTTON_COLOR, fenetre, LARGEUR//2, HAUTEUR//2 - 100)
@@ -1032,7 +1101,7 @@ def show_winner(winner):
             # Bouton Menu Principal
             draw_button(fenetre, "Menu Principal", (LARGEUR - button_width)//2, HAUTEUR//2,
                        button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                       lambda: exec("raise ReturnToMenu()"))  # MODIFIED
+                       lambda: exec("raise ReturnToMenu()"))
 
             # Bouton Rejouer
             mode_text = "Rejouer contre IA" if was_pve_mode else "Rejouer"
@@ -1046,11 +1115,11 @@ def show_winner(winner):
                     sys.exit()
 
             pygame.display.flip()
-    except ReturnToMenu:  # NEW
+    except ReturnToMenu:
         return
 
-def mainPVE(difficulte=None):  # MODIFIED
-    global current_game_mode, current_difficulty  # NEW
+def mainPVE(difficulte=None):
+    global current_game_mode, current_difficulty
     if difficulte is None:
         difficulte = current_difficulty
     current_game_mode = 'PVE'
@@ -1063,7 +1132,7 @@ def mainPVE(difficulte=None):  # MODIFIED
     murs_restants_j1 = 10
     murs_restants_j2 = 10
 
-    try:  # NEW
+    try:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -1196,18 +1265,18 @@ def mainPVE(difficulte=None):  # MODIFIED
             draw_text(f"Murs IA: {murs_restants_j2}", mur_font, BLANC, fenetre, LARGEUR - 100, 50)
 
             pygame.display.flip()
-    except ReturnToMenu:  # NEW
+    except ReturnToMenu:
         return
 
 def mainPVP():
-    global current_game_mode  # NEW
+    global current_game_mode
     current_game_mode = 'PVP'
     grille = creer_grille()
     tour_joueur = 1
     joueur_selectionne = None
     possible_moves = []
 
-    try:  # NEW
+    try:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -1253,7 +1322,7 @@ def mainPVP():
             dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
             dessiner_murs(fenetre)
             pygame.display.flip()
-    except ReturnToMenu:  # NEW
+    except ReturnToMenu:
         return
 
 def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
@@ -1405,7 +1474,7 @@ def difficulty_menu():
     button_spacing = 40
     total_height = button_height * 3 + button_spacing * 2 + 100
 
-    try:  # NEW
+    try:
         while True:
             fenetre.fill(FOND)
             draw_text("Difficulté :", font_title, BUTTON_COLOR, fenetre, LARGEUR // 2, 100)
@@ -1413,15 +1482,15 @@ def difficulty_menu():
             start_y = (HAUTEUR - total_height) // 2 + 100
             draw_button(fenetre, "Facile", (LARGEUR - button_width) // 2, start_y,
                        button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                       lambda: set_difficulty(1))  # MODIFIED
+                       lambda: set_difficulty(DIFFICULTY_EASY))
 
             draw_button(fenetre, "Intermédiaire", (LARGEUR - button_width) // 2, start_y + button_height + button_spacing,
                        button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                       lambda: set_difficulty(3))  # MODIFIED
+                       lambda: set_difficulty(DIFFICULTY_MEDIUM))
 
             draw_button(fenetre, "Difficile", (LARGEUR - button_width) // 2, start_y + (button_height + button_spacing)*2,
                        button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                       lambda: set_difficulty(5))  # MODIFIED
+                       lambda: set_difficulty(DIFFICULTY_HARD))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -1429,10 +1498,10 @@ def difficulty_menu():
                     sys.exit()
 
             pygame.display.flip()
-    except ReturnToMenu:  # NEW
+    except ReturnToMenu:
         return
 
-def set_difficulty(diff):  # NEW
+def set_difficulty(diff):
     global current_difficulty
     current_difficulty = diff
     mainPVE(diff)
@@ -1441,7 +1510,7 @@ def restart_game(was_pve_mode=False):
     global murs
     murs = []
     if was_pve_mode:
-        mainPVE(current_difficulty)  # MODIFIED
+        mainPVE(current_difficulty)
     else:
         mainPVP()
 
@@ -1452,8 +1521,8 @@ def ai_vs_ai_difficulty_menu():
 
     # Utiliser un dictionnaire pour stocker les valeurs modifiables
     state = {
-        "difficulte_ia1": 2,
-        "difficulte_ia2": 2,
+        "difficulte_ia1": DIFFICULTY_MEDIUM,
+        "difficulte_ia2": DIFFICULTY_MEDIUM,
         "selection_en_cours": "IA1"
     }
 
@@ -1468,15 +1537,15 @@ def ai_vs_ai_difficulty_menu():
                 # Boutons pour IA1 avec modification directe du dictionnaire
                 draw_button(fenetre, "Facile", (LARGEUR - button_width)//2, start_y,
                           button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                          lambda: state.update({"difficulte_ia1": 1, "selection_en_cours": "IA2"}))
+                          lambda: state.update({"difficulte_ia1": DIFFICULTY_EASY, "selection_en_cours": "IA2"}))
 
                 draw_button(fenetre, "Intermédiaire", (LARGEUR - button_width)//2, start_y + button_height + button_spacing,
                           button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                          lambda: state.update({"difficulte_ia1": 3, "selection_en_cours": "IA2"}))
+                          lambda: state.update({"difficulte_ia1": DIFFICULTY_MEDIUM, "selection_en_cours": "IA2"}))
 
                 draw_button(fenetre, "Difficile", (LARGEUR - button_width)//2, start_y + (button_height + button_spacing)*2,
                           button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                          lambda: state.update({"difficulte_ia1": 5, "selection_en_cours": "IA2"}))
+                          lambda: state.update({"difficulte_ia1": DIFFICULTY_HARD, "selection_en_cours": "IA2"}))
 
             elif state["selection_en_cours"] == "IA2":
                 draw_text("Difficulté IA2 (bleu) :", font_title, BUTTON_COLOR, fenetre, LARGEUR // 2, 100)
@@ -1485,15 +1554,15 @@ def ai_vs_ai_difficulty_menu():
                 # Boutons pour IA2 avec fermeture explicite
                 draw_button(fenetre, "Facile", (LARGEUR - button_width)//2, start_y,
                           button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                          lambda d=1: mainAIvsAI(state["difficulte_ia1"], d))
+                          lambda d=DIFFICULTY_EASY: mainAIvsAI(state["difficulte_ia1"], d))
 
                 draw_button(fenetre, "Intermédiaire", (LARGEUR - button_width)//2, start_y + button_height + button_spacing,
                           button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                          lambda d=3: mainAIvsAI(state["difficulte_ia1"], d))
+                          lambda d=DIFFICULTY_MEDIUM: mainAIvsAI(state["difficulte_ia1"], d))
 
                 draw_button(fenetre, "Difficile", (LARGEUR - button_width)//2, start_y + (button_height + button_spacing)*2,
                           button_width, button_height, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                          lambda d=5: mainAIvsAI(state["difficulte_ia1"], d))
+                          lambda d=DIFFICULTY_HARD: mainAIvsAI(state["difficulte_ia1"], d))
 
                 # Bouton retour
                 draw_button(fenetre, "Retour", (LARGEUR - button_width)//2, start_y + (button_height + button_spacing)*3,
@@ -1517,17 +1586,17 @@ def batch_ai_menu():
     button_width = 400
     button_height = 60
     state = {
-        "ia1_diff": 1,
-        "ia2_diff": 1,
+        "ia1_diff": DIFFICULTY_EASY,
+        "ia2_diff": DIFFICULTY_EASY,
         "num_matches": 100,
         "current_selection": "IA1"
     }
 
     # Définition des difficultés avec leur valeur réelle et leur nom
     difficulty_options = [
-        {"value": 1, "name": "Facile"},
-        {"value": 3, "name": "Intermédiaire"},
-        {"value": 5, "name": "Difficile"}
+        {"value": DIFFICULTY_EASY, "name": "Facile"},
+        {"value": DIFFICULTY_MEDIUM, "name": "Intermédiaire"},
+        {"value": DIFFICULTY_HARD, "name": "Difficile"}
     ]
 
     try:
@@ -1762,9 +1831,9 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
 def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     """Exécute une série de matchs et affiche les résultats dans la console"""
     difficulty_names = {
-        1: "Facile",
-        3: "Intermédiaire",
-        5: "Difficile"
+        DIFFICULTY_EASY: "Facile",
+        DIFFICULTY_MEDIUM: "Intermédiaire",
+        DIFFICULTY_HARD: "Difficile"
     }
     ia1_name = difficulty_names.get(difficulte_ia1, "Inconnu")
     ia2_name = difficulty_names.get(difficulte_ia2, "Inconnu")
