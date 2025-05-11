@@ -27,9 +27,10 @@ MARGE = 50
 ESPACEMENT = 8
 TAILLE_CASE = (LARGEUR - 2*MARGE - 8*ESPACEMENT) // GRID_SIZE
 
-# Créer la fenêtre
-fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
-pygame.display.set_caption("Quoridor")
+# Créer la fenêtre - initialisation reportée à launch_game
+fenetre = None
+font_title = None  # Sera initialisé lors du lancement
+font_button = None  # Sera initialisé lors du lancement
 
 # Constantes de couleurs
 FOND = (10, 20, 40)  # Bleu nuit dégradé
@@ -45,10 +46,6 @@ CASE_SOMBRE = (200, 183, 142)
 BUTTON_COLOR = (255, 215, 0)  # Jaune
 BUTTON_HOVER_COLOR = (255, 235, 100)  # Jaune plus clair pour le survol
 TEXT_COLOR = (10, 20, 40)  # Bleu nuit
-
-# Charger la police personnalisée
-font_title = pygame.font.Font('NovaSquare-Regular.ttf', 150)  # Police ajustée à 75% de 200
-font_button = pygame.font.Font('NovaSquare-Regular.ttf', 35)  # Police plus petite pour le texte des boutons
 
 murs = []
 mur_preview = None
@@ -109,12 +106,12 @@ def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_pr
         murs: Liste des murs placés
         murs_restants_j1: Nombre de murs restants pour le joueur 1
         murs_restants_j2: Nombre de murs restants pour le joueur 2
-        joueur_principal: Le joueur dont on évalue la position (1 ou 2)
+        joueur_principal: Le joueur dont on évalue la position (1 or 2)
         
     Returns:
         float: Score d'évaluation (positif si favorable au joueur_principal)
     """
-    # Déterminer qui est le joueur et qui est l'adversaire
+    # Déterminer qui est le joueur and qui est l'adversaire
     joueur_num = joueur_principal
     adversaire_num = 3 - joueur_principal  # 1->2, 2->1
 
@@ -144,7 +141,7 @@ def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_pr
     poids_avance = 2.0    # Réduit de 3.0 à 2.0
     poids_position_centrale = 0.3  # Réduit de 0.5 à 0.3
     
-    # Distance et progression - positif quand favorable au joueur_principal
+    # Distance and progression - positif quand favorable au joueur_principal
     # IA facile: fonction simplifiée qui favorise moins les situations avantageuses
     position_score = (dist_adversaire - dist_joueur) * poids_distance
     
@@ -166,7 +163,7 @@ def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_pr
         murs_restants_adversaire = murs_restants_j2 if joueur_num == 1 else murs_restants_j1
         murs_score = (murs_restants_joueur - murs_restants_adversaire) * 0.5
     
-    # Ajouter plus d'aléatoire pour le niveau facile pour éviter les répétitions et rendre moins prévisible
+    # Ajouter plus d'aléatoire pour le niveau facile pour éviter les répétitions and rendre moins prévisible
     random_factor = random.uniform(-2.0, 2.0)  # Augmenté de -0.5/0.5 à -2.0/2.0
     
     return position_score + progres_joueur + centre_score + murs_score + random_factor
@@ -244,7 +241,7 @@ def evaluer_position_intermediaire(grille, murs, murs_restants_j1, murs_restants
 
 def evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal=2):
     """
-    Fonction d'évaluation pour le niveau difficile, plus sophistiquée et équilibrée.
+    Fonction d'évaluation pour le niveau difficile, plus sophistiquée and équilibrée.
     
     Args:
         Identiques à evaluer_position
@@ -271,7 +268,7 @@ def evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2,
     dist_joueur, chemin_joueur = a_star_search(pos_joueur, ligne_obj_joueur, murs)
     dist_adversaire, chemin_adversaire = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
     
-    # Équilibre bien dosé entre progression et blocage
+    # Équilibre bien dosé entre progression and blocage
     poids_distance = 5.5
     poids_avance = 3.5
     poids_position_centrale = 1.0
@@ -280,7 +277,7 @@ def evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2,
     # Score basé sur la différence de distance 
     position_score = (dist_adversaire - dist_joueur) * poids_distance
     
-    # Progression et avancement sur le plateau
+    # Progression and avancement sur le plateau
     if joueur_num == 1:
         progres_joueur = pos_joueur[0] * poids_avance
     else:
@@ -314,7 +311,7 @@ def evaluer_position_difficile(grille, murs, murs_restants_j1, murs_restants_j2,
     elif len(murs) < 16:
         ratio_joueur_adverse = murs_restants_joueur / (murs_restants_adversaire + 0.1)
         murs_score = ratio_joueur_adverse * poids_murs_strategie
-    # En fin de partie, pousser pour la victoire ou bloquer l'adversaire
+    # En fin de partie, pousser pour la victoire or bloquer l'adversaire
     else:
         if dist_joueur < dist_adversaire:
             # Si on est en avance, garder des murs pour bloquer le rattrapage
@@ -338,14 +335,14 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
         profondeur: Profondeur restante de recherche
         alpha, beta: Valeurs pour l'élagage
         est_maximisant: Si c'est le tour du joueur maximisant
-        tour_joueur: Le joueur qui joue actuellement (1 ou 2)
-        joueur_principal: Le joueur pour lequel on optimise (1 ou 2)
+        tour_joueur: Le joueur qui joue actuellement (1 or 2)
+        joueur_principal: Le joueur pour lequel on optimise (1 or 2)
         difficulte: Le niveau de difficulté qui détermine la fonction d'évaluation
         
     Returns:
         float: Score de la meilleure position trouvée
     """
-    # Vérifier fin de partie ou profondeur max atteinte
+    # Vérifier fin de partie or profondeur max atteinte
     if profondeur == 0:
         if difficulte == DIFFICULTY_EASY:
             return evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
@@ -373,7 +370,7 @@ def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha,
     if difficulte == DIFFICULTY_EASY:
         # Limiter les choix à examiner pour l'IA facile
         if len(coups_possibles) > 2:
-            # Ne considérer que 2 coups aléatoires ou quelques coups de base
+            # Ne considérer que 2 coups aléatoires or quelques coups de base
             random.shuffle(coups_possibles)
             coups_possibles = coups_possibles[:2]
 
@@ -518,16 +515,16 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row, dif
     
     # Pour le niveau facile, réduire encore plus l'analyse stratégique
     if difficulte == DIFFICULTY_EASY:
-        # L'IA facile ne regardera qu'un segment à la fois et ne sera pas efficace pour les murs
+        # L'IA facile ne regardera qu'un segment à la fois and ne sera pas efficace pour les murs
         chemins_a_analyser = 1
-        # Si le chemin est court ou chance aléatoire, ne pas analyser du tout
+        # Si le chemin est court or chance aléatoire, ne pas analyser du tout
         if len(chemin) < 3 or random.random() < 0.3:
             return []
     elif difficulte == DIFFICULTY_MEDIUM:
         # L'IA intermédiaire analysera plus de segments pour trouver des opportunités de blocage
         chemins_a_analyser = min(len(chemin) - 1, 4)  # Analyser jusqu'à 4 segments du chemin
     elif difficulte == DIFFICULTY_HARD:
-        # L'IA difficile est plus sélective et efficace
+        # L'IA difficile est plus sélective and efficace
         chemins_a_analyser = min(len(chemin) - 1, 3)  # Analyser jusqu'à 3 segments du chemin
 
     # Analyser chaque segment du chemin pour les murs potentiels
@@ -702,11 +699,11 @@ def meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficult
         murs: Liste des murs placés
         murs_restants_j1, murs_restants_j2: Nombre de murs restants
         difficulte: Niveau de difficulté (1=facile, 3=moyen, 5=difficile)
-        joueur_num: Le joueur pour lequel on cherche le meilleur coup (1 ou 2)
+        joueur_num: Le joueur pour lequel on cherche le meilleur coup (1 or 2)
         
     Returns:
-        tuple: (coup, type_coup) où coup est la position ou le mur,
-               et type_coup est "deplacement" ou "mur"
+        tuple: (coup, type_coup) où coup est la position or le mur,
+               and type_coup est "deplacement" or "mur"
     """
     pos_joueur = find_player_position(grille, joueur_num)
     adversaire_num = 3 - joueur_num
@@ -734,19 +731,19 @@ def meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficult
     
     # Ajuster la stratégie selon la difficulté
     if difficulte == DIFFICULTY_EASY:  # Facile - utilisation simplifiée du minimax
-        # Pour l'IA facile, forte préférence pour des mouvements simples et prévisibles
+        # Pour l'IA facile, forte préférence pour des mouvements simples and prévisibles
         priorite_deplacement = 0.90  # Augmenté de 0.85 à 0.90, très forte préférence pour le déplacement
         # Ajouter un petit aléa pour éviter des comportements répétitifs
         if random.random() < 0.2:  # 20% de chance de changer de stratégie
             priorite_deplacement = 0.75
         
-        # L'IA facile n'est pas consciente de son avantage ou désavantage
+        # L'IA facile n'est pas consciente de son avantage or désavantage
         if random.random() < 0.6:  # 60% du temps, elle ignore la situation de jeu
             # Se désintéresse parfois du placement stratégique des murs
             if dist_adv <= 2 and random.random() < 0.5:  # même quand l'adversaire est proche de gagner
                 priorite_deplacement = 0.85
     elif difficulte == DIFFICULTY_MEDIUM:  # Moyen - plus agressif avec les murs
-        # Plus de murs quand en désavantage ou quand l'adversaire est proche de gagner
+        # Plus de murs quand en désavantage or quand l'adversaire est proche de gagner
         if dist_joueur > dist_adv or dist_adv <= 3:
             priorite_deplacement = 0.4  # 60% de chances de placer un mur
         else:
@@ -756,7 +753,7 @@ def meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficult
         if dist_adv <= 2:  # Si l'adversaire est près de gagner, priorité aux murs
             priorite_deplacement = 0.3
     
-    # Décision: déplacement ou pose de mur
+    # Décision: déplacement or pose de mur
     if random.random() < priorite_deplacement or murs_restants_joueur == 0:
         # DÉPLACEMENT
         return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
@@ -1162,6 +1159,11 @@ def mainPVE(difficulte=None):
                                         grille[current_i][current_j] = 0
                                         grille[i][j] = tour_joueur
 
+                                        # Mettre à jour l'affichage après le mouvement
+                                        dessiner_grille(fenetre, grille, None, [])
+                                        dessiner_murs(fenetre)
+                                        pygame.display.flip()
+
                                         # Vérification victoire joueur
                                         if i == 8:
                                             show_winner(1)
@@ -1183,8 +1185,13 @@ def mainPVE(difficulte=None):
                 elif event.type == pygame.MOUSEMOTION:
                     gestion_hover_souris(event.pos)
 
+            # Mise à jour de l'affichage avant traitement du tour de l'IA
+            dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
+            dessiner_murs(fenetre)
+            pygame.display.flip()
+
             if tour_joueur == 2:
-                # Afficher la sélection et les coups possibles de l'IA
+                # Afficher la sélection and les coups possibles de l'IA
                 pos_ia = find_player_position(grille, 2)
                 if pos_ia:
                     joueur_selectionne = pos_ia
@@ -1204,16 +1211,25 @@ def mainPVE(difficulte=None):
                     pos_ia = find_player_position(grille, 2)
                     if pos_ia:
                         i, j = pos_ia
+                        # Effacer l'ancienne position avant de mettre à jour la grille
                         grille[i][j] = 0
+                        
+                        # Mettre à jour l'affichage intermédiaire (position effacée)
+                        dessiner_grille(fenetre, grille, None, [])
+                        dessiner_murs(fenetre)
+                        pygame.display.flip()
+                        pygame.time.wait(100)  # Court délai pour la transition
+
+                        # Mettre à jour la nouvelle position
                         grille[ni][nj] = 2
 
-                        # Prévisualisation et mise à jour
+                        # Prévisualisation and mise à jour
                         joueur_selectionne = None
                         possible_moves = []
                         dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
                         dessiner_murs(fenetre)
                         pygame.display.flip()
-                        pygame.time.wait(500)
+                        pygame.time.wait(400)  # Délai pour visualiser le mouvement
 
                         # Vérification victoire IA
                         if ni == 0:
@@ -1239,8 +1255,18 @@ def mainPVE(difficulte=None):
                         i, j = pos_ia
                         # Essayer d'avancer vers le haut (ligne 0) si possible
                         if i > 0 and grille[i-1][j] == 0 and not mur_bloque_mouvement(i, j, i-1, j):
+                            # Effacer l'ancienne position
                             grille[i][j] = 0
+                            
+                            # Mise à jour intermédiaire
+                            dessiner_grille(fenetre, grille, None, [])
+                            dessiner_murs(fenetre)
+                            pygame.display.flip()
+                            pygame.time.wait(100)
+                            
+                            # Appliquer la nouvelle position
                             grille[i-1][j] = 2
+                            
                             # Vérification victoire IA
                             if i-1 == 0:
                                 show_winner(2)
@@ -1250,8 +1276,19 @@ def mainPVE(difficulte=None):
                             moves = get_possible_moves(i, j, 2, grille)
                             if moves:
                                 ni, nj = random.choice(moves)
+                                
+                                # Effacer l'ancienne position
                                 grille[i][j] = 0
+                                
+                                # Mise à jour intermédiaire
+                                dessiner_grille(fenetre, grille, None, [])
+                                dessiner_murs(fenetre)
+                                pygame.display.flip()
+                                pygame.time.wait(100)
+                                
+                                # Appliquer la nouvelle position
                                 grille[ni][nj] = 2
+                                
                                 # Vérification victoire IA
                                 if ni == 0:
                                     show_winner(2)
@@ -1305,7 +1342,16 @@ def mainPVP():
                             current_i, current_j = joueur_selectionne
                             if mouvement_est_valide(current_i, current_j, i, j, tour_joueur, grille):
                                 if grille[i][j] == 0:
+                                    # Effacer l'ancienne position
                                     grille[current_i][current_j] = 0
+                                    
+                                    # Mise à jour intermédiaire
+                                    dessiner_grille(fenetre, grille, None, [])
+                                    dessiner_murs(fenetre)
+                                    pygame.display.flip()
+                                    pygame.time.wait(50)  # Court délai pour la transition
+                                    
+                                    # Appliquer la nouvelle position
                                     grille[i][j] = tour_joueur
 
                                     # Vérification victoire
@@ -1394,7 +1440,7 @@ def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
             draw_text("Appuyez sur ESC pour revenir au menu", mur_font, BLANC, fenetre, LARGEUR // 2, HAUTEUR - 20)
 
             pygame.display.flip()
-            pygame.time.wait(500)  # Délai pour visualiser l'état actuel
+            pygame.time.wait(200)  # Délai réduit pour une meilleure fluidité
 
             # Vérification de fin de partie
             tour += 1
@@ -1415,7 +1461,7 @@ def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
                 show_winner(2)
                 return
 
-            # Mise en évidence du joueur actuel et de ses mouvements possibles
+            # Mise en évidence du joueur actuel and de ses mouvements possibles
             if tour_joueur == 1:
                 joueur_selectionne = pos_j1
                 possible_moves = get_possible_moves(pos_j1[0], pos_j1[1], 1, grille) if pos_j1 else []
@@ -1427,7 +1473,7 @@ def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
             dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
             dessiner_murs(fenetre)
             pygame.display.flip()
-            pygame.time.wait(700)  # Délai pour visualiser les possibilités
+            pygame.time.wait(500)  # Délai pour visualiser les possibilités
 
             # Tour du joueur actuel avec la fonction unifiée
             if tour_joueur == 1:
@@ -1444,15 +1490,29 @@ def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
                 if type_coup == "deplacement":
                     ni, nj = coup
                     if pos_j1:
+                        # Effacer l'ancienne position
                         grille[pos_j1[0]][pos_j1[1]] = 0
+                        
+                        # Mise à jour intermédiaire
+                        dessiner_grille(fenetre, grille, None, [])
+                        dessiner_murs(fenetre)
+                        pygame.display.flip()
+                        pygame.time.wait(100)  # Court délai pour la transition
+                        
+                        # Appliquer la nouvelle position
                         grille[ni][nj] = 1
+                        
+                        # Mise à jour finale
+                        dessiner_grille(fenetre, grille, None, [])
+                        dessiner_murs(fenetre)
+                        pygame.display.flip()
                 elif type_coup == "mur" and murs_restants_j1 > 0:
                     # Prévisualisation du mur
                     mur_preview = coup
                     dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
                     dessiner_murs(fenetre)
                     pygame.display.flip()
-                    pygame.time.wait(500)
+                    pygame.time.wait(300)
                     
                     if mur_est_valide(coup) and coup not in murs:
                         murs.append(coup)
@@ -1475,15 +1535,29 @@ def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
                 if type_coup == "deplacement":
                     ni, nj = coup
                     if pos_j2:
+                        # Effacer l'ancienne position
                         grille[pos_j2[0]][pos_j2[1]] = 0
+                        
+                        # Mise à jour intermédiaire
+                        dessiner_grille(fenetre, grille, None, [])
+                        dessiner_murs(fenetre)
+                        pygame.display.flip()
+                        pygame.time.wait(100)  # Court délai pour la transition
+                        
+                        # Appliquer la nouvelle position
                         grille[ni][nj] = 2
+                        
+                        # Mise à jour finale
+                        dessiner_grille(fenetre, grille, None, [])
+                        dessiner_murs(fenetre)
+                        pygame.display.flip()
                 elif type_coup == "mur" and murs_restants_j2 > 0:
                     # Prévisualisation du mur
                     mur_preview = coup
                     dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
                     dessiner_murs(fenetre)
                     pygame.display.flip()
-                    pygame.time.wait(500)
+                    pygame.time.wait(300)
                     
                     if mur_est_valide(coup) and coup not in murs:
                         murs.append(coup)
@@ -1619,7 +1693,7 @@ def batch_ai_menu():
         "current_selection": "IA1"
     }
 
-    # Définition des difficultés avec leur valeur réelle et leur nom
+    # Définition des difficultés avec leur valeur réelle and leur nom
     difficulty_options = [
         {"value": DIFFICULTY_EASY, "name": "Facile"},
         {"value": DIFFICULTY_MEDIUM, "name": "Intermédiaire"},
@@ -1856,7 +1930,7 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
             return 0  # Match nul en cas d'erreur
 
 def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
-    """Exécute une série de matchs et affiche les résultats dans la console"""
+    """Exécute une série de matchs and affiche les résultats dans la console"""
     difficulty_names = {
         DIFFICULTY_EASY: "Facile",
         DIFFICULTY_MEDIUM: "Intermédiaire",
@@ -1871,7 +1945,7 @@ def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     try:
         for match in range(1, num_matches + 1):
             gagnant = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
-            # Vérifier que le résultat est valide (0, 1 ou 2)
+            # Vérifier que le résultat est valide (0, 1 or 2)
             if gagnant not in scores:
                 print(f"Erreur: résultat invalide {gagnant}, considéré comme match nul")
                 gagnant = 0
@@ -1895,5 +1969,62 @@ def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     except Exception as e:
         print(f"Erreur pendant les simulations: {str(e)}")
 
+def launch_game(game_params=None):
+    """
+    Point d'entrée principal pour lancer le jeu depuis un autre script
+    game_params est un dictionnaire avec les options du jeu
+    """
+    global fenetre, font_title, font_button, murs, current_game_mode, current_difficulty
+    
+    # Réinitialiser les variables globales
+    murs = []
+    mur_preview = None
+    
+    # Créer la fenêtre Pygame si elle n'existe pas
+    if fenetre is None:
+        fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
+        pygame.display.set_caption("Quoridor")
+    
+    # Charger les polices
+    try:
+        font_title = pygame.font.Font('NovaSquare-Regular.ttf', 150)
+        font_button = pygame.font.Font('NovaSquare-Regular.ttf', 35)
+    except FileNotFoundError:
+        print("Police non trouvée, utilisation de la police par défaut")
+        font_title = pygame.font.SysFont('arial', 150)
+        font_button = pygame.font.SysFont('arial', 35)
+    
+    # Si aucun paramètre n'est fourni, montrer le menu principal
+    if game_params is None:
+        main_menu()
+        return
+    
+    # Traiter les paramètres du jeu
+    mode = game_params.get('mode')
+    
+    # Assurez-vous que Pygame a le focus (important quand lancé depuis Tkinter)
+    pygame.display.update()
+    pygame.event.pump()  # Traitement des événements en attente
+    
+    if mode == 'PVP':
+        mainPVP()
+    elif mode == 'PVE':
+        difficulty = game_params.get('difficulty', DIFFICULTY_MEDIUM)
+        current_difficulty = difficulty
+        mainPVE(difficulty)
+    elif mode == 'AIvsAI':
+        diff_ia1 = game_params.get('ai1_difficulty', DIFFICULTY_MEDIUM)
+        diff_ia2 = game_params.get('ai2_difficulty', DIFFICULTY_MEDIUM)
+        mainAIvsAI(diff_ia1, diff_ia2)
+    elif mode == 'BatchAI':
+        diff_ia1 = game_params.get('ai1_difficulty', DIFFICULTY_MEDIUM)
+        diff_ia2 = game_params.get('ai2_difficulty', DIFFICULTY_MEDIUM)
+        num_matches = game_params.get('num_matches', 100)
+        run_batch_simulations(diff_ia1, diff_ia2, num_matches)
+        main_menu()  # Retourner au menu après les simulations
+    else:
+        main_menu()
+
+# Point d'entrée lorsqu'exécuté directement
 if __name__ == "__main__":
-    main_menu()
+    launch_game()
