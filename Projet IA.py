@@ -49,6 +49,376 @@ murs = []
 mur_preview = None
 last_click_time = 0  
 
+def a_star_search(start_pos, target_row, walls):
+    """
+    Algorithme A* pour trouver le chemin le plus court vers une ligne cible
+    """
+    if start_pos is None:
+        return float('inf'), []
+
+    def heuristic(pos, target):
+        """Distance Manhattan vers la ligne cible"""
+        return abs(pos[0] - target)
+
+    # Initialisation
+    open_set = []
+    heappush(open_set, (heuristic(start_pos, target_row), 0, start_pos, []))  # (f, g, position, path)
+    closed_set = set()
+
+    while open_set:
+        _, g_score, current_pos, path = heappop(open_set)
+
+        # Arrivé à la ligne cible
+        if current_pos[0] == target_row:
+            return g_score, path + [current_pos]
+
+        # Déjà visité
+        if current_pos in closed_set:
+            continue
+
+        closed_set.add(current_pos)
+        i, j = current_pos
+
+        # Explorer les voisins
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for di, dj in directions:
+            ni, nj = i + di, j + dj
+            neighbor = (ni, nj)
+
+            if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
+                if not mur_bloque_mouvement(i, j, ni, nj, walls):
+                    if neighbor not in closed_set:
+                        new_g = g_score + 1
+                        new_f = new_g + heuristic(neighbor, target_row)
+                        heappush(open_set, (new_f, new_g, neighbor, path + [current_pos]))
+
+    return float('inf'), []  # Pas de chemin trouvé
+
+def evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal=2):
+    """
+    Fonction d'évaluation unifiée pour les deux modes de jeu.
+    Par défaut, évalue du point de vue du joueur 2 (IA) pour compatibilité avec l'ancien code.
+    
+    Args:
+        grille: Grille de jeu actuelle
+        murs: Liste des murs placés
+        murs_restants_j1: Nombre de murs restants pour le joueur 1
+        murs_restants_j2: Nombre de murs restants pour le joueur 2
+        joueur_principal: Le joueur dont on évalue la position (1 ou 2)
+        
+    Returns:
+        float: Score d'évaluation (positif si favorable au joueur_principal)
+    """
+    # Déterminer qui est le joueur et qui est l'adversaire
+    joueur_num = joueur_principal
+    adversaire_num = 3 - joueur_principal  # 1->2, 2->1
+
+    # Trouver les positions des joueurs
+    pos_joueur = find_player_position(grille, joueur_num)
+    pos_adversaire = find_player_position(grille, adversaire_num)
+    
+    if pos_joueur is None or pos_adversaire is None:
+        return 0
+        
+    # Déterminer les lignes objectifs
+    ligne_obj_joueur = 8 if joueur_num == 1 else 0
+    ligne_obj_adversaire = 0 if joueur_num == 1 else 8
+
+    # Détection de fin de partie
+    if pos_joueur[0] == ligne_obj_joueur:  # Joueur principal gagne
+        return 10000
+    if pos_adversaire[0] == ligne_obj_adversaire:  # Adversaire gagne
+        return -10000
+        
+    # Calcul des chemins optimaux
+    dist_joueur, chemin_joueur = a_star_search(pos_joueur, ligne_obj_joueur, murs)
+    dist_adversaire, chemin_adversaire = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
+    
+    # Coefficients de pondération
+    poids_distance = 5.0
+    poids_avance = 3.0 
+    poids_position_centrale = 0.5
+    
+    # Distance et progression - positif quand favorable au joueur_principal
+    position_score = (dist_adversaire - dist_joueur) * poids_distance
+    
+    # Calcul de la progression vers l'objectif
+    if joueur_num == 1:  # Joueur 1 va vers le bas (ligne 8)
+        progres_joueur = pos_joueur[0] * poids_avance
+    else:  # Joueur 2 va vers le haut (ligne 0)
+        progres_joueur = (8 - pos_joueur[0]) * poids_avance
+    
+    # Bonus pour le contrôle du centre
+    centre_score = 0
+    if 3 <= pos_joueur[1] <= 5:
+        centre_score = poids_position_centrale
+    
+    # Impact des murs restants en fin de partie
+    murs_score = 0
+    if dist_joueur <= 3 or dist_adversaire <= 3:  # En fin de partie
+        murs_restants_joueur = murs_restants_j1 if joueur_num == 1 else murs_restants_j2
+        murs_restants_adversaire = murs_restants_j2 if joueur_num == 1 else murs_restants_j1
+        murs_score = (murs_restants_joueur - murs_restants_adversaire) * 0.5
+    
+    return position_score + progres_joueur + centre_score + murs_score
+
+def minimax(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha, beta, 
+           est_maximisant, tour_joueur, joueur_principal=2):
+    """
+    Implémentation unifiée de minimax avec élagage alpha-beta.
+    Par défaut, joue du point de vue du joueur 2 (IA) pour compatibilité.
+    
+    Args:
+        grille: Grille de jeu actuelle
+        murs: Liste des murs placés
+        murs_restants_j1, murs_restants_j2: Nombre de murs restants
+        profondeur: Profondeur restante de recherche
+        alpha, beta: Valeurs pour l'élagage
+        est_maximisant: Si c'est le tour du joueur maximisant
+        tour_joueur: Le joueur qui joue actuellement (1 ou 2)
+        joueur_principal: Le joueur pour lequel on optimise (1 ou 2)
+        
+    Returns:
+        float: Score de la meilleure position trouvée
+    """
+    # Vérifier fin de partie ou profondeur max atteinte
+    if profondeur == 0:
+        return evaluer_position(grille, murs, murs_restants_j1, murs_restants_j2, joueur_principal)
+
+    pos_joueur = find_player_position(grille, tour_joueur)
+    if pos_joueur is None:
+        return 0
+
+    # Ligne objectif dépend du joueur
+    ligne_obj = 8 if tour_joueur == 1 else 0
+
+    # Vérifier victoire
+    if pos_joueur[0] == ligne_obj:
+        return float('inf') if tour_joueur == joueur_principal else float('-inf')
+
+    # Obtenir coups possibles
+    i, j = pos_joueur
+    coups_possibles = get_possible_moves(i, j, tour_joueur, grille)
+
+    # Tour du joueur maximisant (joueur_principal)
+    if est_maximisant:
+        meilleur_score = float('-inf')
+        for coup in coups_possibles:
+            ni, nj = coup
+            # Simuler le coup
+            grille_temp = [ligne[:] for ligne in grille]
+            grille_temp[i][j] = 0
+            grille_temp[ni][nj] = tour_joueur
+
+            # Appel récursif - prochain joueur
+            prochain_tour = 3 - tour_joueur  # 1->2, 2->1
+            score = minimax(grille_temp, murs,
+                          murs_restants_j1 if tour_joueur == 2 else murs_restants_j1,
+                          murs_restants_j2 if tour_joueur == 1 else murs_restants_j2,
+                          profondeur - 1, alpha, beta, False, prochain_tour, joueur_principal)
+
+            meilleur_score = max(score, meilleur_score)
+            alpha = max(alpha, meilleur_score)
+
+            # Élagage
+            if beta <= alpha:
+                break
+
+        return meilleur_score
+
+    # Tour du joueur minimisant
+    else:
+        meilleur_score = float('inf')
+        for coup in coups_possibles:
+            ni, nj = coup
+            # Simuler le coup
+            grille_temp = [ligne[:] for ligne in grille]
+            grille_temp[i][j] = 0
+            grille_temp[ni][nj] = tour_joueur
+
+            # Appel récursif - prochain joueur
+            prochain_tour = 3 - tour_joueur  # 1->2, 2->1
+            score = minimax(grille_temp, murs,
+                          murs_restants_j1 if tour_joueur == 2 else murs_restants_j1,
+                          murs_restants_j2 if tour_joueur == 1 else murs_restants_j2,
+                          profondeur - 1, alpha, beta, True, prochain_tour, joueur_principal)
+
+            meilleur_score = min(score, meilleur_score)
+            beta = min(beta, meilleur_score)
+
+            # Élagage
+            if beta <= alpha:
+                break
+
+        return meilleur_score
+
+def meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur, 
+                                    murs_restants_joueur, murs_restants_adversaire):
+    """Détermine le meilleur déplacement pour un joueur"""
+    i, j = pos_joueur
+    coups_possibles = get_possible_moves(i, j, joueur_num, grille)
+    
+    if not coups_possibles:
+        return None, None
+        
+    meilleur_score = float('-inf')
+    meilleur_coup = None
+    
+    for coup in coups_possibles:
+        ni, nj = coup
+        # Score de base
+        score_base = 0
+        
+        # Bonus pour direction favorable
+        if (joueur_num == 1 and ni > i) or (joueur_num == 2 and ni < i):
+            score_base += 2
+            
+        # Bonus pour position centrale
+        if 3 <= nj <= 5:
+            score_base += 1
+            
+        # Simuler le déplacement
+        grille_temp = [ligne[:] for ligne in grille]
+        grille_temp[i][j] = 0
+        grille_temp[ni][nj] = joueur_num
+        
+        # Évaluation minimax
+        score_minimax = minimax(grille_temp, murs, 
+                              murs_restants_j1=murs_restants_adversaire if joueur_num == 2 else murs_restants_joueur,
+                              murs_restants_j2=murs_restants_adversaire if joueur_num == 1 else murs_restants_joueur,
+                              profondeur=profondeur - 1, 
+                              alpha=float('-inf'), beta=float('inf'), 
+                              est_maximisant=False, 
+                              tour_joueur=3 - joueur_num,
+                              joueur_principal=joueur_num)
+        
+        # Score final
+        score_final = score_base + score_minimax
+        
+        if score_final > meilleur_score:
+            meilleur_score = score_final
+            meilleur_coup = coup
+            
+    return meilleur_coup, "deplacement"
+
+def meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, joueur_num, 
+                           murs_restants, murs_restants_adversaire, ligne_obj_adv, profondeur):
+    """Détermine le meilleur mur à placer pour un joueur"""
+    # Trouver des murs candidats
+    murs_candidats = murs_proches_des_chemins_critique(grille, murs, pos_adversaire, ligne_obj_adv)
+    
+    if not murs_candidats:
+        return None, None
+    
+    meilleur_score = float('-inf')
+    meilleur_mur = None
+    
+    for mur in murs_candidats[:5]:  # Limiter aux 5 meilleurs candidats
+        if mur_est_valide(mur) and mur not in murs:
+            temp_murs = murs.copy()
+            temp_murs.append(mur)
+            
+            # Vérifier que les deux joueurs ont toujours un chemin
+            ligne_obj_joueur = 8 if joueur_num == 1 else 0
+            if has_path(pos_adversaire, ligne_obj_adv, temp_murs) and has_path(pos_joueur, ligne_obj_joueur, temp_murs):
+                score = minimax(grille, temp_murs,
+                              murs_restants_j1=murs_restants_adversaire if joueur_num == 2 else murs_restants - 1,
+                              murs_restants_j2=murs_restants_adversaire if joueur_num == 1 else murs_restants - 1,
+                              profondeur=profondeur - 1,
+                              alpha=float('-inf'), beta=float('inf'),
+                              est_maximisant=False, 
+                              tour_joueur=3 - joueur_num,
+                              joueur_principal=joueur_num)
+                
+                if score > meilleur_score:
+                    meilleur_score = score
+                    meilleur_mur = mur
+                
+    return meilleur_mur, "mur" if meilleur_mur else None
+
+def meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficulte, joueur_num=2):
+    """
+    Fonction unifiée pour déterminer le meilleur coup de l'IA.
+    Par défaut, joue pour le joueur 2 (IA) pour compatibilité.
+    
+    Args:
+        grille: Grille de jeu actuelle
+        murs: Liste des murs placés
+        murs_restants_j1, murs_restants_j2: Nombre de murs restants
+        difficulte: Niveau de difficulté (1=facile, 3=moyen, 5=difficile)
+        joueur_num: Le joueur pour lequel on cherche le meilleur coup (1 ou 2)
+        
+    Returns:
+        tuple: (coup, type_coup) où coup est la position ou le mur,
+               et type_coup est "deplacement" ou "mur"
+    """
+    pos_joueur = find_player_position(grille, joueur_num)
+    adversaire_num = 3 - joueur_num
+    pos_adversaire = find_player_position(grille, adversaire_num)
+    
+    if pos_joueur is None or pos_adversaire is None:
+        return None, None
+
+    # Configuration selon la difficulté
+    profondeur_recherche = {
+        1: 1,   # Facile
+        3: 3,   # Moyen
+        5: 5    # Difficile
+    }.get(difficulte, 3)
+    
+    murs_restants_joueur = murs_restants_j1 if joueur_num == 1 else murs_restants_j2
+    murs_restants_adversaire = murs_restants_j2 if joueur_num == 1 else murs_restants_j1
+
+    # Stratégie simplifiée pour le niveau facile
+    if difficulte == 1:
+        # Déplacement purement directionnel avec Manhattan
+        i, j = pos_joueur
+        coups_possibles = get_possible_moves(i, j, joueur_num, grille)
+        if not coups_possibles:
+            return None, None
+            
+        # Choisir le coup qui rapproche le plus de l'objectif
+        direction = -1 if joueur_num == 2 else 1
+        coups_tries = sorted(coups_possibles, key=lambda x: (direction * x[0], abs(x[1] - 4)))
+        return coups_tries[0], "deplacement"
+
+    # Stratégie pour niveau moyen et difficile
+    else:
+        # Calcul des chemins vers l'objectif
+        ligne_obj_joueur = 8 if joueur_num == 1 else 0
+        ligne_obj_adversaire = 0 if joueur_num == 1 else 8
+        
+        dist_joueur, _ = a_star_search(pos_joueur, ligne_obj_joueur, murs)
+        dist_adv, _ = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
+        
+        # Ajuster la stratégie selon la situation
+        if difficulte == 3:  # Moyen
+            priorite_deplacement = 0.7
+        else:  # Difficile
+            priorite_deplacement = 0.9 if dist_joueur <= dist_adv else 0.5
+            if dist_adv <= 2:  # Si l'adversaire est près de gagner, priorité aux murs
+                priorite_deplacement = 0.2
+        
+        # Décision: déplacement ou pose de mur
+        if random.random() < priorite_deplacement or murs_restants_joueur == 0:
+            # DÉPLACEMENT
+            return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
+                                                  murs_restants_joueur, murs_restants_adversaire)
+        else:
+            # MUR
+            ligne_obj_adv = 8 if adversaire_num == 1 else 0
+            mur_candidat, type_coup = meilleur_mur_pour_joueur(grille, murs, pos_adversaire, pos_joueur, 
+                                                            joueur_num, murs_restants_joueur, 
+                                                            murs_restants_adversaire, ligne_obj_adv, 
+                                                            profondeur_recherche)
+            
+            if mur_candidat:
+                return mur_candidat, type_coup
+            else:
+                # Fallback sur déplacement si pas de bon mur
+                return meilleur_deplacement_pour_joueur(grille, murs, joueur_num, pos_joueur, profondeur_recherche,
+                                                      murs_restants_joueur, murs_restants_adversaire)
+
 def dessiner_murs(surface):
     global mur_preview
     for mur in murs:
@@ -93,12 +463,16 @@ def conflit(mur1, mur2):
                 mur1['y'] <= mur2['y'] + 1 and
                 mur1['y'] + 1 >= mur2['y'])
 
-def mur_est_valide(mur):
+def mur_est_valide(mur, murs_locaux=None):
+    """Version modifiée pour accepter une liste de murs optionnelle"""
+    if murs_locaux is None:
+        murs_locaux = murs
+        
     if not (0 <= mur['x'] <= GRID_SIZE-2 and
             0 <= mur['y'] <= GRID_SIZE-2):
         return False
 
-    for mur_existant in murs:
+    for mur_existant in murs_locaux:
         if conflit(mur, mur_existant):
             return False
 
@@ -172,7 +546,6 @@ def get_possible_moves(i, j, tour_joueur, grille):
     for di, dj in directions:
         ni, nj = i + di, j + dj
         if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
-            # Correction : mur_bloque_mouvement au lieu de mur_bloque_deplacement
             if not mur_bloque_mouvement(i, j, ni, nj) and grille[ni][nj] == 0:
                 moves.append((ni, nj))
             elif grille[ni][nj] not in (0, tour_joueur):
@@ -462,7 +835,7 @@ def mainPVE(difficulte=None):  # MODIFIED
                     pygame.time.wait(500)  # Délai pour visualiser
 
                 # Calcul du meilleur coup avec l'IA améliorée
-                coup, type_coup = meilleur_coup_ia_ameliore(grille, murs, murs_restants_j1, murs_restants_j2, difficulte)
+                coup, type_coup = meilleur_coup_ia(grille, murs, murs_restants_j1, murs_restants_j2, difficulte)
 
                 # Vérification pour s'assurer qu'un coup est joué
                 if coup and type_coup == "deplacement":
@@ -595,217 +968,150 @@ def mainPVP():
             pygame.display.flip()
     except ReturnToMenu:  # NEW
         return
-    
-def evaluer_position_ameliore(grille, murs, murs_restants_j1, murs_restants_j2):
-    # Trouver les positions des joueurs
-    pos_j1 = find_player_position(grille, 1)
-    pos_j2 = find_player_position(grille, 2)
-    
-    if pos_j1 is None or pos_j2 is None:
-        return 0
-        
-    # Détection de fin de partie - augmenter la valeur
-    if pos_j1[0] == 8:  # Joueur 1 gagne
-        return -10000
-    if pos_j2[0] == 0:  # IA gagne
-        return 10000
-        
-    # Calcul des chemins optimaux
-    dist_j1, chemin_j1 = a_star_search(pos_j1, 8, murs)
-    dist_j2, chemin_j2 = a_star_search(pos_j2, 0, murs)
-    
-    # Coefficients de pondération ajustés
-    poids_distance = 5.0      # Fortement augmenté
-    poids_avance_j2 = 3.0     # Bonus pour l'avancée de l'IA
-    poids_position_centrale = 0.5  # Bonus pour le contrôle du centre
-    
-    # Distance et progression
-    position_score = (dist_j1 - dist_j2) * poids_distance
-    progres_j2 = (8 - pos_j2[0]) * poids_avance_j2
-    
-    # Bonus pour le contrôle du centre (colonnes 3-5)
-    centre_score = 0
-    if 3 <= pos_j2[1] <= 5:
-        centre_score = poids_position_centrale
-    
-    # Calculer l'impact des murs restants seulement en fin de partie
-    murs_score = 0
-    if dist_j1 <= 3 or dist_j2 <= 3:  # En fin de partie
-        murs_score = (murs_restants_j2 - murs_restants_j1) * 0.5
-    
-    return position_score + progres_j2 + centre_score + murs_score
 
-def meilleur_coup_ia_ameliore(grille, murs, murs_restants_j1, murs_restants_j2, profondeur):
-    """Décision stratégique entre déplacement et pose de mur"""
-    pos_ia = find_player_position(grille, 2)
-    pos_j1 = find_player_position(grille, 1)
-    
-    if pos_ia is None or pos_j1 is None:
-        return None, None
-        
-    # Calculer les distances actuelles vers l'objectif
-    dist_j1, _ = a_star_search(pos_j1, 8, murs)
-    dist_ia, _ = a_star_search(pos_ia, 0, murs)
-    
-    # Stratégie basée sur la situation
-    if dist_ia <= dist_j1:
-        # L'IA est en avance ou à égalité - priorité au déplacement
-        priorite_deplacement = 0.9
-    else:
-        # L'IA est en retard - équilibrer entre déplacement et murs
-        priorite_deplacement = 0.5
-    
-    # Si l'adversaire est près de gagner, priorité aux murs
-    if dist_j1 <= 2:
-        priorite_deplacement = 0.2
-    
-    # Décision: déplacement ou pose de mur?
-    if random.random() < priorite_deplacement or murs_restants_j2 == 0:
-        # DÉPLACEMENT
-        i, j = pos_ia
-        coups_possibles = get_possible_moves(i, j, 2, grille)
-        
-        if not coups_possibles:
-            return None, None
+def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
+    global current_game_mode, current_difficulty, murs, mur_preview
+    if difficulte_ia1 is None:
+        difficulte_ia1 = current_difficulty
+    if difficulte_ia2 is None:
+        difficulte_ia2 = current_difficulty
+    current_game_mode = 'AIvsAI'
+
+    # Initialisation identique à simulate_ai_vs_ai
+    grille = creer_grille()
+    murs.clear()  # S'assurer que la liste de murs est vide au début
+    tour_joueur = 1
+    murs_restants_j1 = 10
+    murs_restants_j2 = 10
+    max_tours = 200
+    tour = 0
+    joueur_selectionne = None
+    possible_moves = []
+
+    try:
+        while True:
+            # Gestion des évènements
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        raise ReturnToMenu()
+
+            # Affichage de l'état actuel
+            dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
+            dessiner_murs(fenetre)
+
+            # Affichage des informations
+            mur_font = pygame.font.Font('NovaSquare-Regular.ttf', 20)
+            draw_text(f"Tour: {tour}", mur_font, BLANC, fenetre, LARGEUR // 2, 20)
+            draw_text(f"Murs IA1: {murs_restants_j1}", mur_font, BLANC, fenetre, LARGEUR - 100, 20)
+            draw_text(f"Murs IA2: {murs_restants_j2}", mur_font, BLANC, fenetre, LARGEUR - 100, 50)
+            draw_text("Appuyez sur ESC pour revenir au menu", mur_font, BLANC, fenetre, LARGEUR // 2, HAUTEUR - 20)
+
+            pygame.display.flip()
+            pygame.time.wait(500)  # Délai pour visualiser l'état actuel
+
+            # Vérification de fin de partie
+            tour += 1
+            if tour > max_tours:
+                draw_text("Match nul - Nombre maximum de tours atteint", mur_font, BLANC, fenetre, LARGEUR // 2, HAUTEUR // 2)
+                pygame.display.flip()
+                pygame.time.wait(2000)
+                return
+
+            # Vérification victoire immédiate
+            pos_j1 = find_player_position(grille, 1)
+            pos_j2 = find_player_position(grille, 2)
             
-        # Évaluer chaque déplacement possible
-        meilleur_score = float('-inf')
-        meilleur_coup = None
-        
-        # Favoriser les mouvements vers l'avant (ligne 0)
-        for coup in coups_possibles:
-            ni, nj = coup
-            
-            # Score de base
-            score_base = 0
-            
-            # Bonus pour avancer vers la ligne 0
-            if ni < i:
-                score_base += 2
+            if pos_j1 and pos_j1[0] == 8:  # Joueur 1 a gagné
+                show_winner(1)
+                return
+            if pos_j2 and pos_j2[0] == 0:  # Joueur 2 a gagné
+                show_winner(2)
+                return
+
+            # Mise en évidence du joueur actuel et de ses mouvements possibles
+            if tour_joueur == 1:
+                joueur_selectionne = pos_j1
+                possible_moves = get_possible_moves(pos_j1[0], pos_j1[1], 1, grille) if pos_j1 else []
+            else:
+                joueur_selectionne = pos_j2
+                possible_moves = get_possible_moves(pos_j2[0], pos_j2[1], 2, grille) if pos_j2 else []
+
+            # Affichage des possibilités
+            dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
+            dessiner_murs(fenetre)
+            pygame.display.flip()
+            pygame.time.wait(700)  # Délai pour visualiser les possibilités
+
+            # Tour du joueur actuel avec la fonction unifiée
+            if tour_joueur == 1:
+                coup, type_coup = meilleur_coup_ia(
+                    grille, murs, murs_restants_j1, murs_restants_j2, difficulte_ia1, 1
+                )
                 
-            # Bonus pour position centrale
-            if 3 <= nj <= 5:
-                score_base += 1
+                # Fallback si pas de coup valide
+                if not coup or not type_coup:
+                    coup = random.choice(get_possible_moves(pos_j1[0], pos_j1[1], 1, grille))
+                    type_coup = "deplacement"
+
+                # Application du coup avec visualisation
+                if type_coup == "deplacement":
+                    ni, nj = coup
+                    if pos_j1:
+                        grille[pos_j1[0]][pos_j1[1]] = 0
+                        grille[ni][nj] = 1
+                elif type_coup == "mur" and murs_restants_j1 > 0:
+                    # Prévisualisation du mur
+                    mur_preview = coup
+                    dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
+                    dessiner_murs(fenetre)
+                    pygame.display.flip()
+                    pygame.time.wait(500)
+                    
+                    if mur_est_valide(coup) and coup not in murs:
+                        murs.append(coup)
+                        murs_restants_j1 -= 1
+                    mur_preview = None
+
+                tour_joueur = 2
+
+            else:
+                coup, type_coup = meilleur_coup_ia(
+                    grille, murs, murs_restants_j1, murs_restants_j2, difficulte_ia2, 2
+                )
                 
-            # Simuler le déplacement
-            grille_temp = [ligne[:] for ligne in grille]
-            grille_temp[i][j] = 0
-            grille_temp[ni][nj] = 2
-            
-            # Évaluation minimax
-            score_minimax = minimax_ameliore(grille_temp, murs, murs_restants_j1, murs_restants_j2,
-                                           profondeur - 1, float('-inf'), float('inf'), False, 1)
-            
-            # Score final
-            score_final = score_base + score_minimax
-            
-            if score_final > meilleur_score:
-                meilleur_score = score_final
-                meilleur_coup = coup
-                
-        return meilleur_coup, "deplacement"
-        
-    else:
-        # POSE DE MUR
-        murs_candidats = murs_proches_des_chemins_critique(grille, murs, pos_j1, 8)
-        
-        if not murs_candidats:
-            # Pas de bon mur - on fait un déplacement à la place
-            return meilleur_coup_ia_ameliore(grille, murs, murs_restants_j1, murs_restants_j2, profondeur)
-            
-        # Évaluer chaque mur
-        meilleur_score = float('-inf')
-        meilleur_mur = None
-        
-        for mur in murs_candidats:
-            if mur_est_valide(mur) and mur not in murs:
-                temp_murs = murs.copy()
-                temp_murs.append(mur)
-                
-                # Vérifier que les deux joueurs ont toujours un chemin
-                if (has_path(pos_j1, 8, temp_murs) and has_path(pos_ia, 0, temp_murs)):
-                    # Évaluation minimax
-                    score = minimax_ameliore(grille, temp_murs, murs_restants_j1, murs_restants_j2 - 1,
-                                           profondeur - 1, float('-inf'), float('inf'), False, 1)
-                                           
-                    if score > meilleur_score:
-                        meilleur_score = score
-                        meilleur_mur = mur
-                        
-        if meilleur_mur:
-            return meilleur_mur, "mur"
-        else:
-            # Fallback - déplacement
-            return meilleur_coup_ia_ameliore(grille, murs, murs_restants_j1, murs_restants_j2, profondeur)
+                # Fallback si pas de coup valide
+                if not coup or not type_coup:
+                    coup = random.choice(get_possible_moves(pos_j2[0], pos_j2[1], 2, grille))
+                    type_coup = "deplacement"
 
-def minimax_ameliore(grille, murs, murs_restants_j1, murs_restants_j2, profondeur, alpha, beta, est_maximisant, tour_joueur):
-    """
-    Implémentation améliorée de l'algorithme minimax avec élagage alpha-beta
-    """
-    # Vérifier si la partie est terminée ou si on a atteint la profondeur maximale
-    if profondeur == 0:
-        return evaluer_position_ameliore(grille, murs, murs_restants_j1, murs_restants_j2)
+                # Application du coup avec visualisation
+                if type_coup == "deplacement":
+                    ni, nj = coup
+                    if pos_j2:
+                        grille[pos_j2[0]][pos_j2[1]] = 0
+                        grille[ni][nj] = 2
+                elif type_coup == "mur" and murs_restants_j2 > 0:
+                    # Prévisualisation du mur
+                    mur_preview = coup
+                    dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
+                    dessiner_murs(fenetre)
+                    pygame.display.flip()
+                    pygame.time.wait(500)
+                    
+                    if mur_est_valide(coup) and coup not in murs:
+                        murs.append(coup)
+                        murs_restants_j2 -= 1
+                    mur_preview = None
 
-    pos_joueur = find_player_position(grille, tour_joueur)
-    if pos_joueur is None:
-        return 0
+                tour_joueur = 1
 
-    # Vérifier si un joueur a gagné
-    if (tour_joueur == 1 and pos_joueur[0] == 8) or (tour_joueur == 2 and pos_joueur[0] == 0):
-        return float('inf') if est_maximisant else float('-inf')
+    except ReturnToMenu:
+        return
 
-    # Obtenir tous les coups possibles (déplacements)
-    i, j = pos_joueur
-    coups_possibles = get_possible_moves(i, j, tour_joueur, grille)
-
-    # Si c'est au tour du joueur maximisant (IA/joueur 2)
-    if est_maximisant:
-        meilleur_score = float('-inf')
-        for coup in coups_possibles:
-            ni, nj = coup
-            # Simuler le coup
-            grille_temp = [ligne[:] for ligne in grille]
-            grille_temp[i][j] = 0
-            grille_temp[ni][nj] = tour_joueur
-
-            # Appel récursif
-            prochain_tour = 1 if tour_joueur == 2 else 2
-            score = minimax_ameliore(grille_temp, murs, murs_restants_j1, murs_restants_j2,
-                                     profondeur - 1, alpha, beta, False, prochain_tour)
-
-            meilleur_score = max(score, meilleur_score)
-            alpha = max(alpha, meilleur_score)
-
-            # Élagage
-            if beta <= alpha:
-                break
-
-        return meilleur_score
-
-    # Si c'est au tour du joueur minimisant (joueur humain)
-    else:
-        meilleur_score = float('inf')
-        for coup in coups_possibles:
-            ni, nj = coup
-            # Simuler le coup
-            grille_temp = [ligne[:] for ligne in grille]
-            grille_temp[i][j] = 0
-            grille_temp[ni][nj] = tour_joueur
-
-            # Appel récursif
-            prochain_tour = 1 if tour_joueur == 2 else 2
-            score = minimax_ameliore(grille_temp, murs, murs_restants_j1, murs_restants_j2,
-                                     profondeur - 1, alpha, beta, True, prochain_tour)
-
-            meilleur_score = min(score, meilleur_score)
-            beta = min(beta, meilleur_score)
-
-            # Élagage
-            if beta <= alpha:
-                break
-
-        return meilleur_score
-    
 def difficulty_menu():
     button_width = 450
     button_height = 80
@@ -851,359 +1157,6 @@ def restart_game(was_pve_mode=False):
         mainPVE(current_difficulty)  # MODIFIED
     else:
         mainPVP()
-
-def mainAIvsAI(difficulte_ia1=None, difficulte_ia2=None):
-    global current_game_mode, current_difficulty, murs, mur_preview  # Déclaration globale unique
-    if difficulte_ia1 is None:
-        difficulte_ia1 = current_difficulty
-    if difficulte_ia2 is None:
-        difficulte_ia2 = current_difficulty
-    current_game_mode = 'AIvsAI'
-
-    grille = creer_grille()
-    tour_joueur = 1
-    joueur_selectionne = None
-    possible_moves = []
-    murs_restants_j1 = 10
-    murs_restants_j2 = 10
-
-    try:
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        raise ReturnToMenu()
-
-            # Affichage avant mouvement
-            dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
-            dessiner_murs(fenetre)
-
-            # Affichage murs restants
-            mur_font = pygame.font.Font('NovaSquare-Regular.ttf', 20)
-            draw_text(f"Murs IA1: {murs_restants_j1}", mur_font, BLANC, fenetre, LARGEUR - 100, 20)
-            draw_text(f"Murs IA2: {murs_restants_j2}", mur_font, BLANC, fenetre, LARGEUR - 100, 50)
-            draw_text("Appuyez sur ESC pour revenir au menu", mur_font, BLANC, fenetre, LARGEUR // 2, HAUTEUR - 20)
-
-            pygame.display.flip()
-            pygame.time.wait(500)
-
-            # Tour IA1 (Joueur 1)
-            if tour_joueur == 1:
-                pos_ia1 = find_player_position(grille, 1)
-                if pos_ia1:
-                    joueur_selectionne = pos_ia1
-                    possible_moves = get_possible_moves(pos_ia1[0], pos_ia1[1], 1, grille)
-                    dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
-                    dessiner_murs(fenetre)
-                    pygame.display.flip()
-                    pygame.time.wait(700)
-
-                coup, type_coup = meilleur_coup_ia_ameliore_custom(grille, murs, murs_restants_j1, murs_restants_j2, difficulte_ia1, 1)
-
-                if coup and type_coup == "deplacement":
-                    ni, nj = coup
-                    pos_ia1 = find_player_position(grille, 1)
-                    if pos_ia1:
-                        i, j = pos_ia1
-                        grille[i][j] = 0
-                        grille[ni][nj] = 1
-                        if ni == 8:
-                            show_winner(1)
-                            return
-
-                elif coup and type_coup == "mur":
-                    mur_preview = coup  # Plus besoin de 'global' ici
-                    dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
-                    dessiner_murs(fenetre)
-                    pygame.display.flip()
-                    pygame.time.wait(700)
-                    murs.append(coup)
-                    mur_preview = None
-                    murs_restants_j1 -= 1
-
-                tour_joueur = 2
-
-            # Tour IA2 (Joueur 2)
-            else:
-                pos_ia2 = find_player_position(grille, 2)
-                if pos_ia2:
-                    joueur_selectionne = pos_ia2
-                    possible_moves = get_possible_moves(pos_ia2[0], pos_ia2[1], 2, grille)
-                    dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
-                    dessiner_murs(fenetre)
-                    pygame.display.flip()
-                    pygame.time.wait(700)
-
-                coup, type_coup = meilleur_coup_ia_ameliore_custom(grille, murs, murs_restants_j2, murs_restants_j1, difficulte_ia2, 2)
-
-                if coup and type_coup == "deplacement":
-                    ni, nj = coup
-                    pos_ia2 = find_player_position(grille, 2)
-                    if pos_ia2:
-                        i, j = pos_ia2
-                        grille[i][j] = 0
-                        grille[ni][nj] = 2
-                        if ni == 0:
-                            show_winner(2)
-                            return
-
-                elif coup and type_coup == "mur":
-                    mur_preview = coup  # Plus besoin de 'global' ici
-                    dessiner_grille(fenetre, grille, joueur_selectionne, possible_moves)
-                    dessiner_murs(fenetre)
-                    pygame.display.flip()
-                    pygame.time.wait(700)
-                    murs.append(coup)
-                    mur_preview = None
-                    murs_restants_j2 -= 1
-
-                tour_joueur = 1
-
-    except ReturnToMenu:
-        return
-
-def meilleur_coup_ia_ameliore_custom(grille, murs, murs_restants_joueur, murs_restants_adversaire, profondeur, joueur_num):
-    """
-    Version personnalisée de meilleur_coup_ia_ameliore qui fonctionne pour les deux joueurs
-    """
-    pos_joueur = find_player_position(grille, joueur_num)
-    adversaire_num = 3 - joueur_num  # 1->2, 2->1
-    pos_adversaire = find_player_position(grille, adversaire_num)
-
-    if pos_joueur is None or pos_adversaire is None:
-        return None, None
-
-    # Définir la ligne objectif en fonction du joueur
-    ligne_obj_joueur = 8 if joueur_num == 1 else 0
-    ligne_obj_adversaire = 0 if joueur_num == 1 else 8
-
-    # Calculer les distances actuelles vers l'objectif
-    dist_adversaire, _ = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
-    dist_joueur, _ = a_star_search(pos_joueur, ligne_obj_joueur, murs)
-
-    # Stratégie basée sur la situation
-    if dist_joueur <= dist_adversaire:
-        priorite_deplacement = 0.9
-    else:
-        priorite_deplacement = 0.5
-
-    if dist_adversaire <= 2:
-        priorite_deplacement = 0.2
-
-    # Décision: déplacement ou pose de mur?
-    if random.random() < priorite_deplacement or murs_restants_joueur == 0:
-        # DÉPLACEMENT
-        i, j = pos_joueur
-        coups_possibles = get_possible_moves(i, j, joueur_num, grille)
-
-        if not coups_possibles:  # Aucun coup possible
-            return None, None
-
-        meilleur_score = float('-inf')
-        meilleur_coup = None
-        direction_avance = -1 if joueur_num == 2 else 1
-
-        for coup in coups_possibles:
-            ni, nj = coup
-
-            # Score de base
-            score_base = 0
-            
-            # Bonus pour avancer vers l'objectif
-            if direction_avance * (ni - i) > 0:
-                score_base += 2
-
-            if 3 <= nj <= 5:  # Position centrale
-                score_base += 1
-
-            # Simuler le déplacement
-            grille_temp = [ligne[:] for ligne in grille]
-            grille_temp[i][j] = 0
-            grille_temp[ni][nj] = joueur_num
-
-            # Évaluation minimax
-            score_minimax = minimax_ameliore_custom(
-                grille_temp, murs, 
-                murs_restants_joueur, murs_restants_adversaire,
-                profondeur - 1, float('-inf'), float('inf'), 
-                False, adversaire_num, joueur_num
-            )
-
-            score_final = score_base + score_minimax
-
-            if score_final > meilleur_score:
-                meilleur_score = score_final
-                meilleur_coup = coup
-
-        return meilleur_coup, "deplacement" if meilleur_coup else None
-
-    else:  # POSE DE MUR
-        murs_candidats = murs_proches_des_chemins_critique(grille, murs, pos_adversaire, ligne_obj_adversaire)
-
-        if not murs_candidats:  # Fallback si aucun mur valide
-            return None, None
-
-        meilleur_score = float('-inf')
-        meilleur_mur = None
-
-        for mur in murs_candidats:
-            if mur_est_valide(mur) and mur not in murs:
-                temp_murs = murs.copy()
-                temp_murs.append(mur)
-
-                # Vérification des chemins
-                if (has_path(pos_adversaire, ligne_obj_adversaire, temp_murs) and 
-                   has_path(pos_joueur, ligne_obj_joueur, temp_murs)):
-
-                    # Évaluation minimax
-                    score = minimax_ameliore_custom(
-                        grille, temp_murs, 
-                        murs_restants_joueur - 1, murs_restants_adversaire,
-                        profondeur - 1, float('-inf'), float('inf'), 
-                        False, adversaire_num, joueur_num
-                    )
-
-                    if score > meilleur_score:
-                        meilleur_score = score
-                        meilleur_mur = mur
-
-        if meilleur_mur:
-            return meilleur_mur, "mur"
-        else:  # Double fallback
-            return None, None
-        
-def minimax_ameliore_custom(grille, murs, murs_restants_joueur, murs_restants_adversaire, profondeur, alpha, beta, est_maximisant, tour_joueur, joueur_principal):
-    """
-    Version améliorée de minimax qui fonctionne pour n'importe quel joueur
-    """
-    # Vérifier si la partie est terminée ou si on a atteint la profondeur maximale
-    if profondeur == 0:
-        return evaluer_position_ameliore_custom(grille, murs, murs_restants_joueur, murs_restants_adversaire, joueur_principal)
-
-    pos_joueur = find_player_position(grille, tour_joueur)
-    if pos_joueur is None:
-        return 0
-
-    # Ligne objectif dépend du joueur
-    ligne_obj = 8 if tour_joueur == 1 else 0
-
-    # Vérifier si un joueur a gagné
-    if pos_joueur[0] == ligne_obj:
-        return float('inf') if tour_joueur == joueur_principal else float('-inf')
-
-    # Obtenir tous les coups possibles (déplacements)
-    i, j = pos_joueur
-    coups_possibles = get_possible_moves(i, j, tour_joueur, grille)
-
-    # Si c'est le tour du joueur maximisant (joueur_principal)
-    if est_maximisant:
-        meilleur_score = float('-inf')
-        for coup in coups_possibles:
-            ni, nj = coup
-            # Simuler le coup
-            grille_temp = [ligne[:] for ligne in grille]
-            grille_temp[i][j] = 0
-            grille_temp[ni][nj] = tour_joueur
-
-            # Appel récursif - prochain joueur
-            prochain_tour = 3 - tour_joueur  # 1->2, 2->1
-            score = minimax_ameliore_custom(grille_temp, murs,
-                                  murs_restants_adversaire if tour_joueur != joueur_principal else murs_restants_joueur,
-                                  murs_restants_joueur if tour_joueur != joueur_principal else murs_restants_adversaire,
-                                  profondeur - 1, alpha, beta, False, prochain_tour, joueur_principal)
-
-            meilleur_score = max(score, meilleur_score)
-            alpha = max(alpha, meilleur_score)
-
-            # Élagage
-            if beta <= alpha:
-                break
-
-        return meilleur_score
-
-    # Si c'est au tour du joueur minimisant (adversaire)
-    else:
-        meilleur_score = float('inf')
-        for coup in coups_possibles:
-            ni, nj = coup
-            # Simuler le coup
-            grille_temp = [ligne[:] for ligne in grille]
-            grille_temp[i][j] = 0
-            grille_temp[ni][nj] = tour_joueur
-
-            # Appel récursif - prochain joueur
-            prochain_tour = 3 - tour_joueur  # 1->2, 2->1
-            score = minimax_ameliore_custom(grille_temp, murs,
-                                  murs_restants_adversaire if tour_joueur != joueur_principal else murs_restants_joueur,
-                                  murs_restants_joueur if tour_joueur != joueur_principal else murs_restants_adversaire,
-                                  profondeur - 1, alpha, beta, True, prochain_tour, joueur_principal)
-
-            meilleur_score = min(score, meilleur_score)
-            beta = min(beta, meilleur_score)
-
-            # Élagage
-            if beta <= alpha:
-                break
-
-        return meilleur_score
-
-def evaluer_position_ameliore_custom(grille, murs, murs_restants_joueur, murs_restants_adversaire, joueur_principal):
-    """
-    Fonction d'évaluation adaptée pour fonctionner avec les deux joueurs
-    """
-    # Déterminer qui est le joueur et qui est l'adversaire
-    joueur_num = joueur_principal
-    adversaire_num = 3 - joueur_principal  # 1->2, 2->1
-
-    # Trouver les positions des joueurs
-    pos_joueur = find_player_position(grille, joueur_num)
-    pos_adversaire = find_player_position(grille, adversaire_num)
-
-    if pos_joueur is None or pos_adversaire is None:
-        return 0
-
-    # Déterminer les lignes objectifs
-    ligne_obj_joueur = 8 if joueur_num == 1 else 0
-    ligne_obj_adversaire = 0 if joueur_num == 1 else 8
-
-    # Détection de fin de partie
-    if pos_joueur[0] == ligne_obj_joueur:  # Joueur principal gagne
-        return 10000
-    if pos_adversaire[0] == ligne_obj_adversaire:  # Adversaire gagne
-        return -10000
-
-    # Calcul des chemins optimaux
-    dist_joueur, chemin_joueur = a_star_search(pos_joueur, ligne_obj_joueur, murs)
-    dist_adversaire, chemin_adversaire = a_star_search(pos_adversaire, ligne_obj_adversaire, murs)
-
-    # Coefficients de pondération
-    poids_distance = 5.0
-    poids_avance = 3.0
-    poids_position_centrale = 0.5
-
-    # Distance et progression - maintenant le score est positif quand c'est favorable au joueur principal
-    position_score = (dist_adversaire - dist_joueur) * poids_distance
-
-    # Calcul de la progression vers l'objectif dépend du joueur
-    if joueur_num == 1:  # Joueur 1 va vers le bas (ligne 8)
-        progres_joueur = pos_joueur[0] * poids_avance
-    else:  # Joueur 2 va vers le haut (ligne 0)
-        progres_joueur = (8 - pos_joueur[0]) * poids_avance
-
-    # Bonus pour le contrôle du centre
-    centre_score = 0
-    if 3 <= pos_joueur[1] <= 5:
-        centre_score = poids_position_centrale
-
-    # Calcul de l'impact des murs restants en fin de partie
-    murs_score = 0
-    if dist_joueur <= 3 or dist_adversaire <= 3:  # En fin de partie
-        murs_score = (murs_restants_joueur - murs_restants_adversaire) * 0.5
-
-    return position_score + progres_joueur + centre_score + murs_score
 
 def ai_vs_ai_difficulty_menu():
     button_width = 450
@@ -1272,6 +1225,73 @@ def ai_vs_ai_difficulty_menu():
     except ReturnToMenu:
         return
 
+def batch_ai_menu():
+    """Menu de configuration des matchs en batch"""
+    button_width = 400
+    button_height = 60
+    state = {
+        "ia1_diff": 1,
+        "ia2_diff": 1,
+        "num_matches": 100,
+        "current_selection": "IA1"
+    }
+
+    # Définition des difficultés avec leur valeur réelle et leur nom
+    difficulty_options = [
+        {"value": 1, "name": "Facile"},
+        {"value": 3, "name": "Intermédiaire"},
+        {"value": 5, "name": "Difficile"}
+    ]
+
+    try:
+        while True:
+            fenetre.fill(FOND)
+            draw_text("BATCH IA vs IA", font_title, BUTTON_COLOR, fenetre, LARGEUR//2, 100)
+
+            # Sélection difficulté IA1
+            y = 200
+            draw_text("IA 1 (Rouge):", font_button, BLANC, fenetre, LARGEUR//2 - 200, y)
+            for i, diff in enumerate(difficulty_options):
+                x = LARGEUR//2 - 150 + i*130
+                selected = state["ia1_diff"] == diff["value"]
+                draw_button(fenetre, diff["name"], x, y, 
+                          120, 40, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
+                          lambda d=diff["value"]: state.update({"ia1_diff": d}))
+
+            # Sélection difficulté IA2
+            y += 80
+            draw_text("IA 2 (Bleu):", font_button, BLANC, fenetre, LARGEUR//2 - 200, y)
+            for i, diff in enumerate(difficulty_options):
+                x = LARGEUR//2 - 150 + i*130
+                selected = state["ia2_diff"] == diff["value"]
+                draw_button(fenetre, diff["name"], x, y, 
+                          120, 40, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
+                          lambda d=diff["value"]: state.update({"ia2_diff": d}))
+
+            # Nombre de matchs
+            y += 100
+            draw_text(f"Nombre de matchs: {state['num_matches']}", font_button, BLANC, fenetre, LARGEUR//2, y)
+            draw_button(fenetre, "-", LARGEUR//2 - 100, y + 40, 50, 40, BUTTON_COLOR, BUTTON_HOVER_COLOR,
+                       lambda: state.update({"num_matches": max(1, state["num_matches"]-1)}))
+            draw_button(fenetre, "+", LARGEUR//2 + 50, y + 40, 50, 40, BUTTON_COLOR, BUTTON_HOVER_COLOR,
+                       lambda: state.update({"num_matches": state["num_matches"]+1}))
+
+            # Bouton de lancement
+            draw_button(fenetre, "LANCER", LARGEUR//2 - 100, HAUTEUR - 100, 200, 60, 
+                      (0, 150, 0), (0, 200, 0), 
+                      lambda: run_batch_simulations(state["ia1_diff"], state["ia2_diff"], state["num_matches"]))
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    raise ReturnToMenu()
+
+            pygame.display.flip()
+    except ReturnToMenu:
+        return
+
 def main_menu():
     button_width = 450
     button_height = 80
@@ -1306,51 +1326,6 @@ def main_menu():
             pygame.display.flip()
     except ReturnToMenu:
         main_menu()
-
-def a_star_search(start_pos, target_row, walls):
-    """
-    Algorithme A* pour trouver le chemin le plus court vers une ligne cible
-    """
-    if start_pos is None:
-        return float('inf'), []
-
-    def heuristic(pos, target):
-        """Distance Manhattan vers la ligne cible"""
-        return abs(pos[0] - target)
-
-    # Initialisation
-    open_set = []
-    heappush(open_set, (heuristic(start_pos, target_row), 0, start_pos, []))  # (f, g, position, path)
-    closed_set = set()
-
-    while open_set:
-        _, g_score, current_pos, path = heappop(open_set)
-
-        # Arrivé à la ligne cible
-        if current_pos[0] == target_row:
-            return g_score, path + [current_pos]
-
-        # Déjà visité
-        if current_pos in closed_set:
-            continue
-
-        closed_set.add(current_pos)
-        i, j = current_pos
-
-        # Explorer les voisins
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        for di, dj in directions:
-            ni, nj = i + di, j + dj
-            neighbor = (ni, nj)
-
-            if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE:
-                if not mur_bloque_mouvement(i, j, ni, nj, walls):
-                    if neighbor not in closed_set:
-                        new_g = g_score + 1
-                        new_f = new_g + heuristic(neighbor, target_row)
-                        heappush(open_set, (new_f, new_g, neighbor, path + [current_pos]))
-
-    return float('inf'), []  # Pas de chemin trouvé
 
 def count_chemins_alternatifs(pos, target_row, walls, max_depth=10):
     """
@@ -1477,7 +1452,7 @@ def murs_proches_des_chemins_critique(grille, walls, pos_joueur, target_row):
 def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
     """Simulation complète sans interface graphique"""
     grille = creer_grille()
-    murs = []
+    murs_locaux = []  # Utiliser une liste de murs locale
     tour_joueur = 1
     murs_restants_j1 = 10
     murs_restants_j2 = 10
@@ -1493,55 +1468,70 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
         pos_j1 = find_player_position(grille, 1)
         pos_j2 = find_player_position(grille, 2)
         
-        if pos_j1 and pos_j1[0] == 8:  # Joueur 1 a gagné
+        if pos_j1 is None or pos_j2 is None:
+            return 0  # En cas d'erreur, considérer comme match nul
+            
+        if pos_j1[0] == 8:  # Joueur 1 a gagné
             return 1
-        if pos_j2 and pos_j2[0] == 0:  # Joueur 2 a gagné
+        if pos_j2[0] == 0:  # Joueur 2 a gagné
             return 2
 
         try:
             # Tour du joueur actuel
             if tour_joueur == 1:
-                coup, type_coup = meilleur_coup_ia_ameliore_custom(
-                    grille, murs, murs_restants_j1, murs_restants_j2, difficulte_ia1, 1
+                # S'assurer que get_possible_moves ne retourne pas une liste vide
+                moves = get_possible_moves(pos_j1[0], pos_j1[1], 1, grille)
+                if not moves:
+                    return 0  # Match nul si aucun mouvement possible
+                    
+                coup, type_coup = meilleur_coup_ia(
+                    grille, murs_locaux, murs_restants_j1, murs_restants_j2, difficulte_ia1, 1
                 )
                 
                 # Fallback si pas de coup valide
                 if not coup or not type_coup:
-                    coup = random.choice(get_possible_moves(pos_j1[0], pos_j1[1], 1, grille))
+                    if not moves:
+                        return 0  # Match nul si aucun mouvement possible
+                    coup = random.choice(moves)
                     type_coup = "deplacement"
 
                 # Application du coup
                 if type_coup == "deplacement":
                     ni, nj = coup
-                    if pos_j1:
-                        grille[pos_j1[0]][pos_j1[1]] = 0
-                        grille[ni][nj] = 1
+                    grille[pos_j1[0]][pos_j1[1]] = 0
+                    grille[ni][nj] = 1
                 elif type_coup == "mur" and murs_restants_j1 > 0:
-                    if mur_est_valide(coup) and coup not in murs:
-                        murs.append(coup)
+                    if mur_est_valide(coup) and coup not in murs_locaux:
+                        murs_locaux.append(coup)
                         murs_restants_j1 -= 1
 
                 tour_joueur = 2
 
             else:
+                # S'assurer que get_possible_moves ne retourne pas une liste vide
+                moves = get_possible_moves(pos_j2[0], pos_j2[1], 2, grille)
+                if not moves:
+                    return 0  # Match nul si aucun mouvement possible
+                
                 # Même logique pour le joueur 2
-                coup, type_coup = meilleur_coup_ia_ameliore_custom(
-                    grille, murs, murs_restants_j2, murs_restants_j1, difficulte_ia2, 2
+                coup, type_coup = meilleur_coup_ia(
+                    grille, murs_locaux, murs_restants_j1, murs_restants_j2, difficulte_ia2, 2
                 )
                 
                 # Fallback si pas de coup valide
                 if not coup or not type_coup:
-                    coup = random.choice(get_possible_moves(pos_j2[0], pos_j2[1], 2, grille))
+                    if not moves:
+                        return 0  # Match nul si aucun mouvement possible
+                    coup = random.choice(moves)
                     type_coup = "deplacement"
 
                 if type_coup == "deplacement":
                     ni, nj = coup
-                    if pos_j2:
-                        grille[pos_j2[0]][pos_j2[1]] = 0
-                        grille[ni][nj] = 2
+                    grille[pos_j2[0]][pos_j2[1]] = 0
+                    grille[ni][nj] = 2
                 elif type_coup == "mur" and murs_restants_j2 > 0:
-                    if mur_est_valide(coup) and coup not in murs:
-                        murs.append(coup)
+                    if mur_est_valide(coup) and coup not in murs_locaux:
+                        murs_locaux.append(coup)
                         murs_restants_j2 -= 1
 
                 tour_joueur = 1
@@ -1549,7 +1539,7 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
         except Exception as e:
             print(f"Erreur durant la simulation: {str(e)}")
             return 0  # Match nul en cas d'erreur
-        
+
 def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     """Exécute une série de matchs et affiche les résultats dans la console"""
     difficulty_names = {
@@ -1561,80 +1551,34 @@ def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     ia2_name = difficulty_names.get(difficulte_ia2, "Inconnu")
     
     print(f"\nDébut de {num_matches} matchs {ia1_name} vs {ia2_name}...")
-    scores = {1: 0, 2: 0}
-
-    for match in range(1, num_matches + 1):
-        gagnant = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
-        scores[gagnant] += 1
-        print(f"- Match {match} : {ia1_name if gagnant == 1 else ia2_name} gagne")
-
-    print("\nRésultats finaux:")
-    total = sum(scores.values())
-    print(f"- {ia1_name}: {scores[1]} victoires ({scores[1]/total*100:.1f}%)")
-    print(f"- {ia2_name}: {scores[2]} victoires ({scores[2]/total*100:.1f}%)")
-    print("----------------------------------")
+    scores = {0: 0, 1: 0, 2: 0}  # Clé 0 pour les matchs nuls
     
-
-def batch_ai_menu():
-    """Menu de configuration des matchs en batch"""
-    button_width = 400
-    button_height = 60
-    state = {
-        "ia1_diff": 1,
-        "ia2_diff": 1,
-        "num_matches": 100,
-        "current_selection": "IA1"
-    }
-
     try:
-        while True:
-            fenetre.fill(FOND)
-            draw_text("BATCH IA vs IA", font_title, BUTTON_COLOR, fenetre, LARGEUR//2, 100)
+        for match in range(1, num_matches + 1):
+            gagnant = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
+            # Vérifier que le résultat est valide (0, 1 ou 2)
+            if gagnant not in scores:
+                print(f"Erreur: résultat invalide {gagnant}, considéré comme match nul")
+                gagnant = 0
+                
+            scores[gagnant] += 1
+            if gagnant == 0:
+                resultat = "Match nul"
+            else:
+                resultat = f"{ia1_name if gagnant == 1 else ia2_name} gagne"
+            print(f"- Match {match} : {resultat}")
 
-            # Sélection difficulté IA1
-            y = 200
-            draw_text("IA 1 (Rouge):", font_button, BLANC, fenetre, LARGEUR//2 - 200, y)
-            for diff in [1, 3, 5]:
-                x = LARGEUR//2 - 150 + (diff-1)*130
-                selected = state["ia1_diff"] == diff
-                draw_button(fenetre, ["Facile", "Intermédiaire", "Difficile"][diff//2], x, y, 
-                          120, 40, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
-                          lambda d=diff: state.update(ia1_diff=d))
-
-            # Sélection difficulté IA2
-            y += 80
-            draw_text("IA 2 (Bleu):", font_button, BLANC, fenetre, LARGEUR//2 - 200, y)
-            for diff in [1, 3, 5]:
-                x = LARGEUR//2 - 150 + (diff-1)*130
-                selected = state["ia2_diff"] == diff
-                draw_button(fenetre, ["Facile", "Intermédiaire", "Difficile"][diff//2], x, y, 
-                          120, 40, BUTTON_COLOR if not selected else (0,200,0), BUTTON_HOVER_COLOR,
-                          lambda d=diff: state.update(ia2_diff=d))
-
-            # Nombre de matchs
-            y += 100
-            draw_text(f"Nombre de matchs: {state['num_matches']}", font_button, BLANC, fenetre, LARGEUR//2, y)
-            draw_button(fenetre, "-", LARGEUR//2 - 100, y + 40, 50, 40, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                       lambda: state.update(num_matches=max(1, state["num_matches"]-1)))
-            draw_button(fenetre, "+", LARGEUR//2 + 50, y + 40, 50, 40, BUTTON_COLOR, BUTTON_HOVER_COLOR,
-                       lambda: state.update(num_matches=state["num_matches"]+1))
-
-            # Bouton de lancement
-            draw_button(fenetre, "LANCER", LARGEUR//2 - 100, HAUTEUR - 100, 200, 60, 
-                      (0, 150, 0), (0, 200, 0), 
-                      lambda: run_batch_simulations(state["ia1_diff"], state["ia2_diff"], state["num_matches"]))
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    raise ReturnToMenu()
-
-            pygame.display.flip()
-    except ReturnToMenu:
-        return
-    
+        print("\nRésultats finaux:")
+        total = sum(scores.values())
+        if total > 0:  # Éviter division par zéro
+            print(f"- {ia1_name}: {scores[1]} victoires ({scores[1]/total*100:.1f}%)")
+            print(f"- {ia2_name}: {scores[2]} victoires ({scores[2]/total*100:.1f}%)")
+            print(f"- Matchs nuls: {scores[0]} ({scores[0]/total*100:.1f}%)")
+        else:
+            print("Aucun match n'a été complété avec succès.")
+        print("----------------------------------")
+    except Exception as e:
+        print(f"Erreur pendant les simulations: {str(e)}")
 
 if __name__ == "__main__":
     main_menu()
