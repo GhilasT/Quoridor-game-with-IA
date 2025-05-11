@@ -452,7 +452,7 @@ class QuoridorMenuApp:
         self.progress_window = tk.Toplevel(self.root)
         self.progress_window.title("Simulation en cours")
         self.progress_window.configure(bg="#0a1428")
-        self.progress_window.geometry("500x350")
+        self.progress_window.geometry("600x450")
         self.progress_window.transient(self.root)  # Make it a child of the main window
         self.progress_window.grab_set()  # Make it modal
         
@@ -566,7 +566,7 @@ class QuoridorMenuApp:
             # Force update the window
             self.progress_window.update_idletasks()
             
-    def show_batch_results(self, results):
+    def show_batch_results(self, results, moyenne_coups=None):
         """Show the batch simulation results"""
         if not self.progress_window or not self.progress_window.winfo_exists():
             return
@@ -594,6 +594,8 @@ class QuoridorMenuApp:
             self.result_text.insert(tk.END, f"- {ia1_name}: {results[1]} victoires ({results[1]/total*100:.1f}%)\n")
             self.result_text.insert(tk.END, f"- {ia2_name}: {results[2]} victoires ({results[2]/total*100:.1f}%)\n")
             self.result_text.insert(tk.END, f"- Matchs nuls: {results[0]} ({results[0]/total*100:.1f}%)\n")
+            if moyenne_coups is not None:
+                self.result_text.insert(tk.END, f"- Moyenne de coups par match: {moyenne_coups:.1f}\n")
         else:
             self.result_text.insert(tk.END, "Aucun match n'a été complété avec succès.\n")
         self.result_text.config(state=tk.DISABLED)

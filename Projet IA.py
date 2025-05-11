@@ -1852,19 +1852,19 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
     while True:
         tour += 1
         if tour > max_tours:
-            return 0  # Match nul après 200 tours
+            return 0, tour  # Match nul après 200 tours, renvoie également le nombre de coups
 
         # Vérification victoire immédiate
         pos_j1 = find_player_position(grille, 1)
         pos_j2 = find_player_position(grille, 2)
         
         if pos_j1 is None or pos_j2 is None:
-            return 0  # En cas d'erreur, considérer comme match nul
+            return 0, tour  # En cas d'erreur, considérer comme match nul
             
         if pos_j1[0] == 8:  # Joueur 1 a gagné
-            return 1
+            return 1, tour
         if pos_j2[0] == 0:  # Joueur 2 a gagné
-            return 2
+            return 2, tour
 
         try:
             # Tour du joueur actuel
@@ -1872,7 +1872,7 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
                 # S'assurer que get_possible_moves ne retourne pas une liste vide
                 moves = get_possible_moves(pos_j1[0], pos_j1[1], 1, grille)
                 if not moves:
-                    return 0  # Match nul si aucun mouvement possible
+                    return 0, tour  # Match nul si aucun mouvement possible
                     
                 coup, type_coup = meilleur_coup_ia(
                     grille, murs_locaux, murs_restants_j1, murs_restants_j2, difficulte_ia1, 1
@@ -1881,7 +1881,7 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
                 # Fallback si pas de coup valide
                 if not coup or not type_coup:
                     if not moves:
-                        return 0  # Match nul si aucun mouvement possible
+                        return 0, tour  # Match nul si aucun mouvement possible
                     coup = random.choice(moves)
                     type_coup = "deplacement"
 
@@ -1901,7 +1901,7 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
                 # S'assurer que get_possible_moves ne retourne pas une liste vide
                 moves = get_possible_moves(pos_j2[0], pos_j2[1], 2, grille)
                 if not moves:
-                    return 0  # Match nul si aucun mouvement possible
+                    return 0, tour  # Match nul si aucun mouvement possible
                 
                 # Même logique pour le joueur 2
                 coup, type_coup = meilleur_coup_ia(
@@ -1911,7 +1911,7 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
                 # Fallback si pas de coup valide
                 if not coup or not type_coup:
                     if not moves:
-                        return 0  # Match nul si aucun mouvement possible
+                        return 0, tour  # Match nul si aucun mouvement possible
                     coup = random.choice(moves)
                     type_coup = "deplacement"
 
@@ -1928,7 +1928,7 @@ def simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2):
 
         except Exception as e:
             print(f"Erreur durant la simulation: {str(e)}")
-            return 0  # Match nul en cas d'erreur
+            return 0, tour  # Match nul en cas d'erreur
 
 def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     """Exécute une série de matchs and affiche les résultats dans la console"""
@@ -1942,10 +1942,13 @@ def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
     
     print(f"\nDébut de {num_matches} matchs {ia1_name} vs {ia2_name}...")
     scores = {0: 0, 1: 0, 2: 0}  # Clé 0 pour les matchs nuls
+    total_coups = 0  # Pour calculer la moyenne
     
     try:
         for match in range(1, num_matches + 1):
-            gagnant = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
+            gagnant, nombre_coups = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
+            total_coups += nombre_coups
+            
             # Vérifier que le résultat est valide (0, 1 or 2)
             if gagnant not in scores:
                 print(f"Erreur: résultat invalide {gagnant}, considéré comme match nul")
@@ -1956,7 +1959,7 @@ def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
                 resultat = "Match nul"
             else:
                 resultat = f"{ia1_name if gagnant == 1 else ia2_name} gagne"
-            print(f"- Match {match} : {resultat}")
+            print(f"- Match {match} : {resultat} en {nombre_coups} coups")
 
         print("\nRésultats finaux:")
         total = sum(scores.values())
@@ -1964,6 +1967,7 @@ def run_batch_simulations(difficulte_ia1, difficulte_ia2, num_matches):
             print(f"- {ia1_name}: {scores[1]} victoires ({scores[1]/total*100:.1f}%)")
             print(f"- {ia2_name}: {scores[2]} victoires ({scores[2]/total*100:.1f}%)")
             print(f"- Matchs nuls: {scores[0]} ({scores[0]/total*100:.1f}%)")
+            print(f"- Moyenne de coups par match: {total_coups/total:.1f}")
         else:
             print("Aucun match n'a été complété avec succès.")
         print("----------------------------------")
@@ -1992,6 +1996,7 @@ def run_batch_simulations_with_progress(difficulte_ia1, difficulte_ia2, num_matc
     
     print(f"\nDébut de {num_matches} matchs {ia1_name} vs {ia2_name}...")
     scores = {0: 0, 1: 0, 2: 0}  # Clé 0 pour les matchs nuls
+    total_coups = 0  # Pour calculer la moyenne
     
     # Minimiser la fenêtre pygame pour qu'elle reste en arrière-plan
     if fenetre:
@@ -2004,7 +2009,8 @@ def run_batch_simulations_with_progress(difficulte_ia1, difficulte_ia2, num_matc
                 status = f"Simulation du match {match}/{num_matches}..."
                 progress_callback(match-1, num_matches, status)
                 
-            gagnant = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
+            gagnant, nombre_coups = simulate_ai_vs_ai(difficulte_ia1, difficulte_ia2)
+            total_coups += nombre_coups
             
             # Vérifier que le résultat est valide (0, 1 or 2)
             if gagnant not in scores:
@@ -2016,26 +2022,30 @@ def run_batch_simulations_with_progress(difficulte_ia1, difficulte_ia2, num_matc
                 resultat = "Match nul"
             else:
                 resultat = f"{ia1_name if gagnant == 1 else ia2_name} gagne"
-            print(f"- Match {match}/{num_matches} : {resultat}")
+            print(f"- Match {match}/{num_matches} : {resultat} en {nombre_coups} coups")
             
             # Mise à jour de la progression après le match
             if progress_callback:
-                status = f"Match {match}/{num_matches} terminé: {resultat}"
+                status = f"Match {match}/{num_matches} terminé: {resultat} en {nombre_coups} coups"
                 progress_callback(match, num_matches, status)
 
         print("\nRésultats finaux:")
         total = sum(scores.values())
         if total > 0:  # Éviter division par zéro
+            moyenne_coups = total_coups / total
             print(f"- {ia1_name}: {scores[1]} victoires ({scores[1]/total*100:.1f}%)")
             print(f"- {ia2_name}: {scores[2]} victoires ({scores[2]/total*100:.1f}%)")
             print(f"- Matchs nuls: {scores[0]} ({scores[0]/total*100:.1f}%)")
+            print(f"- Moyenne de coups par match: {moyenne_coups:.1f}")
         else:
             print("Aucun match n'a été complété avec succès.")
+            moyenne_coups = 0
         print("----------------------------------")
         
         # Appel à la fonction de rappel pour afficher les résultats finaux
         if result_callback:
-            result_callback(scores)
+            # Ajouter la moyenne de coups à la fonction de rappel
+            result_callback(scores, moyenne_coups)
         
     except Exception as e:
         print(f"Erreur pendant les simulations: {str(e)}")
